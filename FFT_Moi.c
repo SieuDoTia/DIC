@@ -1,8 +1,8 @@
 /*
  *  FFT_Mới.c
  *
- *  Phiên bản đầu 2006.07.10
- *  2017.12.02  14:00
+ *  Phiên bản đầu: 2006.07.10
+ *  Phiên bản đầu mới: 2017.12.02  14:00
  */
 
 //#include "FFT.h"
@@ -27,6 +27,7 @@ SoPhuc *nghich_FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat );
 // ==== TIN HIỆU, nữa đầu là thật, nữa cuối là aỏ
 int main( int argc, char **agrv ) {
    
+   // ---- tạo tin hiểu để thử hàm FFT và hàm nghịch_FFT
    unsigned short beDaiTiHieu = 8;
    SoPhuc *tinHieu = malloc( beDaiTiHieu*sizeof(SoPhuc) );
    unsigned char chiSo = 0;
@@ -52,25 +53,8 @@ int main( int argc, char **agrv ) {
    }
   printf( "\n" );
    
-   // ==== nghịch biến hóa
-   // ---- trao đổi phần thật và aỏ
-   printf( "tin hiệu biến hóa lật:\n" );
-   chiSo = 0;
-   while ( chiSo < beDaiTiHieu ) {
-      if( chiSo < beDaiTiHieu ) {
-         float so = tinHieuBienHoa[chiSo].t;
-         tinHieuBienHoa[chiSo].t = tinHieuBienHoa[chiSo].a;
-         tinHieuBienHoa[chiSo].a = so;
-      }
-
-      printf( "%d   %5.3f %5.3f\n", chiSo, tinHieuBienHoa[chiSo].t, tinHieuBienHoa[chiSo].a );
-      chiSo++;
-   }
-   printf( "\n" );
-   
-   // ----
-   SoPhuc *tinHieuTraoLai = FFT( tinHieuBienHoa, beDaiTiHieu );
-
+   // ---- nghịch biến hóa
+   SoPhuc *tinHieuTraoLai = nghich_FFT( tinHieuBienHoa, beDaiTiHieu );
 
    printf( "tin hiệu trở lại:\n" );
    chiSo = 0;
@@ -91,15 +75,14 @@ SoPhuc *FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat ) {
    unsigned int ketQua = soLuongMauVat >> 1;    // chia 2 trước
    
    while( ketQua > 0 ) {
-      muSoHai++;           // cộng ên mũ
-      ketQua = ketQua >> 1;   // chia 2
+      muSoHai++;             // cộng lên mũ
+      ketQua = ketQua >> 1;  // chia 2
    }
-   
 
    // ---- nếu số lượng mẫu vật không bằng số mũ 2, bỏ số không đằng sau cho số lượng mẫu vật đủ số mũ 2 tiếp
    if( 1 << muSoHai != soLuongMauVat ) {
       // ---- Báo số lượng mẫu vật trong tin hiệu không phải là số mũ hai
- //     printf( "số lượng mẫu vật của tin hiệu không bằng số mũ 2!\n" );
+      printf( "số lượng mẫu vật của tin hiệu không chẩng số mũ 2! Đang kèm số không cho chẳng\n" );
       // ---- tăng mũ lên một cho được giỡ toàn tin hiệu
       muSoHai++;
       // ---- giữ số lượng mẫu vật ban đầu cho chép tin hiệu
@@ -154,18 +137,20 @@ SoPhuc *FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat ) {
    }
 
    // ==== BIẾN HÓA ====
-   // tạo mảng giữa chừng ---- bề dài gấp hai lần số lượng mẫu vật, nhân 2 vì số phức: thật và ảo
+
    // khi bắt đầu chia thành các tập
    //   - tập đầu chỉ có 2 phân tử (sốLượngPhầnTửTrongTập)
    //   - số lượng tập là sốLượngMẫuVật/sốLượngPhầnTửTrongTập
    
-   SoPhuc *mangBienDoi = calloc( soLuongMauVat, sizeof( SoPhuc ) );  //
-   SoPhuc *mangBienDoiPhu = calloc( soLuongMauVat, sizeof( SoPhuc ) );  //
+   // ---- tạo mẳng để tính biến hóa
+   SoPhuc *mangBienDoi = calloc( soLuongMauVat, sizeof( SoPhuc ) );  // mảng chứa dỡ liệu đang biến đổi
+   SoPhuc *mangBienDoiPhu = calloc( soLuongMauVat, sizeof( SoPhuc ) );  // mảng để nhận kết qủa từ biến đổi
+
+   // ---- dùng mảng nghịch bit để sắp xếp dữ liệu đúng thứ tự để áp dụng gaỉi thuật Cooley Tukey
    unsigned short chiSoTinHieu = 0;
    while ( chiSoTinHieu < soLuongMauVat ) {
       mangBienDoi[chiSoTinHieu].t = tinHieu[mangBitNguoc[chiSoTinHieu]].t;
       mangBienDoi[chiSoTinHieu].a = tinHieu[mangBitNguoc[chiSoTinHieu]].a;
-//      printf( "%d   %5.3f %5.3f\n", chiSoTinHieu, mangBienDoi[chiSoTinHieu].t, mangBienDoi[chiSoTinHieu].a );
       chiSoTinHieu++;
    }
 
@@ -207,16 +192,11 @@ SoPhuc *FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat ) {
       SoPhuc *mang = mangBienDoi;
       mangBienDoi = mangBienDoiPhu;
       mangBienDoiPhu = mang;
-      
-//      unsigned char chiSo = 0;
-//      while( chiSo < soLuongMauVat ){
-//         printf( "  %5.3f  %5.3f\n", mangBienDoi[chiSo].t, mangBienDoi[chiSo].a );
-//         chiSo++;
-//      }
-//      printf( "---------\n" );
+
       mucBienHoa++;
    }
-//      exit(0);
+
+   // ---- thả trí nhớ (nên KHÔNG làm nếu cần biến đổi nhiều dữ liệu)
    free( mangHeSo );
    free( mangBienDoiPhu );
 
@@ -224,3 +204,18 @@ SoPhuc *FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat ) {
 }
 
 
+SoPhuc *nghich_FFT( SoPhuc *tinHieu, unsigned int soLuongMauVat ) {
+   
+   unsigned int chiSo = 0;
+   while ( chiSo < soLuongMauVat ) {
+      if( chiSo < soLuongMauVat ) {
+         float so = tinHieu[chiSo].t;
+         tinHieu[chiSo].t = tinHieu[chiSo].a;
+         tinHieu[chiSo].a = so;
+      }
+      
+       chiSo++;
+   }
+   
+   return FFT( tinHieu, soLuongMauVat );
+}

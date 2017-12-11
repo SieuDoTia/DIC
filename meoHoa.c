@@ -1,12 +1,10 @@
-//  suKhacBietXam.c   // sựKhácBiệtXám.c
-//  Phiên bản 1.2
-//  Phát hành 2560/11/27
+//  meoHoa.c   // méoHóa.c
+//  Phiên bản 1.0
+//  Phát hành 2560/12/11
 //  Cho ảnh PNG
-//  Khởi đầu 2560/03/13
+//  Khởi đầu 2560/12/11
 //
-//  Xuất sự khác biệt màu xám
-
-// So sánh hai ảnh và tính sự khác biệt giữa chung. Giúp biết xài mẫu vật đủ cho Blender.
+//  Xuất ảnh bất méo hóa
 
 #import <stdio.h>
 #import <stdlib.h>

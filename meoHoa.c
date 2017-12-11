@@ -15,14 +15,6 @@
 #define kSAI  0
 #define kDUNG 1
 
-typedef struct {
-   short trai;
-   short phai;
-   short duoi;
-   short tren;
-} ChuNhat;
-
-#define kSO_LUONG__HE_SO_BO_LOC_BLACKMAN 21  // <--- QUAN TRỌNG: PHẢI DÙNG SỐ LẺ NHE!
 
 /* đọc tệp PNG BGRO */
 unsigned char *docPNG_BGRO( char *duongTapTin, unsigned int *beRong, unsigned int *beCao, unsigned char *canLatMau );

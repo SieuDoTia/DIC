@@ -19,10 +19,10 @@
 
 /* Điểm */
 typedef struct {
-   unsigned int x;
-   unsigned int y;
-   unsigned char docX;
-   unsigned char docY;
+   int x;
+   int y;
+   char docX;
+   char docY;
    float goc;
    float huongX;
    float huongY;
@@ -86,6 +86,8 @@ unsigned char *catAnh( unsigned char *anh, unsigned int beRong, unsigned beCao, 
 
 /* Tìm Đường */
 void tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach );
+
+void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1 );
 
 /* Lưu ảnh PNG */
 void luuAnhPNG( char *tenTep, unsigned char *suKhacBiet, unsigned int beRong, unsigned int beCao );
@@ -1127,11 +1129,11 @@ unsigned char *catAnh( unsigned char *anhGoc, unsigned int beRongGoc, unsigned i
    return anhCat;
 }
 
-#pragma mark ---- Tìm Đường
+#pragma mark ---- Tìm Đạo Cao
 
 unsigned char phanTichCacDiemNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diem );
-void diTheoDuongCaoTuDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diem );
-void tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diemKhoiDau, Diem *mangDiemMoi, unsigned char *soLuongDiemMoi );
+void diTheoDoiDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diem );
+Diem tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diemKhoiDau );
 
 void toMauCacDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *mangDiemCao, unsigned short soLuongDiem, unsigned int mau );
 
@@ -1144,9 +1146,9 @@ void toMauCacDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, 
 // |<----------->|<----------->|
 void tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach ) {
    
-   unsigned int soHang = 1140;  // Thử nghiệm
+   unsigned int soHang = 1140;  // Thử nghiệm, tìma các điểm cao trong ảnh và đi xuông theo nó
 
-   {
+   // ---- TÌM KHỞI ĐẦU CHo CÁC ĐƯỜNG
    Diem mangDiemThichThu[64];
    unsigned short chiSoMangToaDo = 0;
    
@@ -1175,12 +1177,101 @@ void tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beC
    }
 
    printf( "số lượng điểm %d\n", chiSoMangToaDo );
-//
-//   diTheoDuongCaoTuDiem( anh, beRong, beCao, &(mangDiemThichThu[0]) );
    
    toMauCacDiem( anh, beRong, beCao, mangDiemThichThu, chiSoMangToaDo, 0x0000ffff );
 
-   }
+   // ==== ĐI THEO DÕI ĐƯỜNG
+   // ---- kiếm các điểm ở dưới
+   mangDiemThichThu[0].huongX = 0.0f;
+   mangDiemThichThu[0].huongY = -1.0f;
+   diTheoDoiDuong( anh, beRong, beCao, &(mangDiemThichThu[0]) );
+   
+   Diem d0;
+   Diem d1;
+
+   printf( "-- 0\n" );
+   d0.x = 0;
+   d0.y = 0;
+   
+   d1.x = 5;
+   d1.y = 0;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 1\n" );
+   d1.x = 5;
+   d1.y = 2;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 2\n" );
+   d1.x = 5;
+   d1.y = 5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 3\n" );
+   d1.x = 2;
+   d1.y = 5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 4\n" );
+   d1.x = 0;
+   d1.y = 5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   printf( "------ 5\n" );
+   
+   d1.x = -2;
+   d1.y = 5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 6\n" );
+   d1.x = -5;
+   d1.y = 5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 7\n" );
+   d1.x = -5;
+   d1.y = 2;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-- 8\n" );
+   d1.x = -5;
+   d1.y = 0;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   printf( "-------- 9 \n" );
+   
+   d1.x = -5;
+   d1.y = -2;
+   veDuong( anh, beRong, beCao, d0, d1 );
+
+   printf( "-- 10\n" );
+   d1.x = -5;
+   d1.y = -5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+
+   printf( "-- 11\n" );
+   d1.x = -2;
+   d1.y = -5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+
+   printf( "-- 12\n" );
+   d1.x = 0;
+   d1.y = -5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   
+   printf( "-------- 13 \n" );
+   d1.x = 2;
+   d1.y = -5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   printf( "-- 14\n" );
+   
+   d1.x = 5;
+   d1.y = -5;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   printf( "-- 15\n" );
+
+   d1.x = 5;
+   d1.y = -2;
+   veDuong( anh, beRong, beCao, d0, d1 );
+   printf( "-- 16\n" );
 }
 
 // - quét tới và lui kiếm điểm cao nhất  <----+---->
@@ -1196,15 +1287,15 @@ void tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beC
 //         -------/      \------   <---- tìm điểm cao
 //
 //     2.          ------
-//         ---*---/      \------   <---- tìm điểm cao
+//         ---*---/      \------   <---- tìm điểm cao - CHƯA được kiếm trường hợp này
 //
 //     3.          ------
-//         -------/      \---*--   <---- tìm điểm cao
+//         -------/      \---*--   <---- tìm điểm cao - CHƯA được kiếm trường hợp này
 //
-//     4.             ----------   <---- bỏ trường hợp
+//     4.             ----------   <---- bỏ trường hợp này
 //         ------*---/
 //
-//     5.             -----*----   <---- bỏ trường hợp
+//     5.             -----*----   <---- bỏ trường hợp này
 //         ----------/
 
 #define kCHUA_BIET 0
@@ -1251,45 +1342,41 @@ unsigned char phanTichCacDiemNgang( unsigned char *anh, unsigned int beRong, uns
    return kSAI;
 }
 
-void diTheoDuongCaoTuDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diem ) {
+
+void diTheoDoiDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diem ) {
    
-   unsigned int duoiHanThap = 500;// <---- NHỚ BỎ CÁI NÀY KHI DÙNG MẶT NẠ
-   unsigned int duoiHanCao = 1200;// <---- NHỚ BỎ CÁI NÀY KHI DÙNG MẶT NẠ
+   unsigned int duoiHanThap = 250;// <---- NHỚ BỎ CÁI NÀY KHI DÙNG MẶT NẠ
+ 
    Diem danhSachDiem[1024];  // chứa điểm
    danhSachDiem[0] = *diem;
-   diem->huongX = 0.0f;
-   diem->huongY = 0.0f;
+
    
    Diem nganXepDiem[16];  // chứa điểm đang kiểm tra
    
    // ---- tiến tới
-   {
-      unsigned char soLuongDiemMoi = 0;
-      Diem mangDiemMoi[5];
-      tienToi( anh, beRong, beCao, diem, mangDiemMoi, &soLuongDiemMoi );
-      
-      printf( "soLuongDiemMoi %d\n", soLuongDiemMoi );
-      unsigned char chiSoDiem = 0;
-      while( chiSoDiem < soLuongDiemMoi ) {
-
-         // ---- xem có điểm này chưa
-         printf("%d %d  huong di %5.3f %5.3f\n", mangDiemMoi[chiSoDiem].x, mangDiemMoi[chiSoDiem].y, mangDiemMoi[chiSoDiem].huongX, mangDiemMoi[chiSoDiem].huongY );
-         toMauCacDiem( anh, beRong, beCao, &(mangDiemMoi[chiSoDiem]), 1, 0x0000ffff );
-         if( (mangDiemMoi[chiSoDiem].y < duoiHanCao)  || (mangDiemMoi[chiSoDiem].y < duoiHanCao) )
-            tienToi( anh, beRong, beCao, &(mangDiemMoi[chiSoDiem]), mangDiemMoi, &soLuongDiemMoi );
+   Diem diemMoi;
+   diemMoi.x = diem->x;
+   diemMoi.y = diem->y;
+   diemMoi.huongX = diem->huongX;
+   diemMoi.huongY = diem->huongY;
    
-         chiSoDiem++;
-      }
+   while( diemMoi.y > 250 ) {
+
+      diemMoi = tienToi( anh, beRong, beCao, &diemMoi );
+
+      // ---- xem có điểm này chưa
+      printf("%d %d  huong di %5.3f %5.3f\n", diemMoi.x, diemMoi.y, diemMoi.huongX, diemMoi.huongY );
+      toMauCacDiem( anh, beRong, beCao, &diemMoi, 1, 0x0000ffff );
    }
       
    // ---- xem đã đến từ hướng này chưa
    
 }
 
-void tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diemKhoiDau, Diem *mangDiemMoi, unsigned char *soLuongDiemMoi ) {
+Diem tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *diemKhoiDau ) {
    
-   float banKinh = 50.0f; // giạ trị chọn thí
-//   printf( " Diem %d %d\n", diemKhoiDau->x, diemKhoiDau->y );
+   float banKinh = 60.0f; // giạ trị chọn thí
+   printf( " Diem khoi dau: %d %d\n", diemKhoiDau->x, diemKhoiDau->y );
 
    // ---- xem điểm quanh
    unsigned char mangGiaTri[22];
@@ -1329,6 +1416,8 @@ void tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem 
    }
    
    // ---- tìm điểm mới để đi
+   Diem diemMoi;
+
    chiSoGoc = 0;
    while( chiSoGoc < 21 ) {
  //     printf( " mangDoc[%d] %d (%d)\n", chiSoGoc, mangDoc[chiSoGoc], mangGiaTri[chiSoGoc] );
@@ -1342,16 +1431,19 @@ void tienToi( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem 
          huongX = huongX/doLonHuong;
          huongY = huongY/doLonHuong;
          float tichVoHuong = huongX*huongX + huongY*huongY;
-         if( tichVoHuong > 0 ) {
+         if( tichVoHuong > 0.0f ) {
 //            printf( "----- %5.3f %d %d\n", mangDiemGoc[chiSoGoc].goc, mangDiemGoc[chiSoGoc].x, mangDiemGoc[chiSoGoc].y );
-            mangDiemMoi[*soLuongDiemMoi].x = mangDiemGoc[chiSoGoc].x;
-            mangDiemMoi[*soLuongDiemMoi].y = mangDiemGoc[chiSoGoc].y;
-            (*soLuongDiemMoi)++;
+            diemMoi.x = mangDiemGoc[chiSoGoc].x;
+            diemMoi.y = mangDiemGoc[chiSoGoc].y;
+            diemMoi.huongX = huongX;
+            diemMoi.huongY = huongY;
          }
 
       }
       chiSoGoc++;
    }
+   
+   return diemMoi;
 }
 
 void toMauCacDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem *mangDiemCao, unsigned short soLuongDiem, unsigned int mau ) {
@@ -1406,6 +1498,122 @@ void toMauCacDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, 
       anh[diaChiAnh + 5] = mauLuc;
       anh[diaChiAnh + 6] = mauXanh;
       chiSo++;
+   }
+}
+
+
+// Giải thuật Bresenham
+void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1 ) {
+   
+   short cachX = diem1.x - diem0.x;
+   short cachY = diem1.y - diem0.y;
+//   printf( " cach %d %d\n", cachX, cachY );
+   
+   // ---- ∆x < 0; ∆y < 0 đổi thành ∆x > 0; ∆y > 0
+   if( (cachX <= 0) && (cachY <= 0) ) {
+ //     printf( " ...dang trao doi\n");
+      cachX = -cachX;
+      cachY = -cachY;
+      short so_x = diem0.x;
+      short so_y = diem0.y;
+      diem0.x = diem1.x;
+      diem0.y = diem1.y;
+      diem1.x = so_x;
+      diem1.y = so_y;
+   }
+   else if( (cachX > 0) && (cachY < 0) ) {
+      cachX = -cachX;
+      cachY = -cachY;
+      short so_x = diem0.x;
+      short so_y = diem0.y;
+      diem0.x = diem1.x;
+      diem0.y = diem1.y;
+      diem1.x = so_x;
+      diem1.y = so_y;
+   }
+//   printf( " (sau trao doi) cach %d %d  diem0 %d %d   diem1 %d %d\n", cachX, cachY, diem0.x, diem0.y, diem1.x, diem1.y );
+
+   short x = diem0.x;
+   short y = diem0.y;
+   
+   if( (cachX == 0) && (cachY != 0) ) {  // đường dọc
+      while( y <= diem1.y ) {
+//         printf( "(%d; %d)\n", x, y );
+         y++;
+      }
+   }
+   else if( (cachX != 0) && (cachY == 0) ) {  // đường ngang
+      while( x <= diem1.x ) {
+//         printf( "(%d; %d)\n", x, y );
+         x++;
+      }
+   }
+   
+   else {
+      if( cachX > 0 && cachY > 0 ) {  // ---- ∆x > 0; ∆y > 0
+         if( cachY <= cachX ) {
+            short saiLam = (cachY << 1) - cachX;
+            
+            while( x <= diem1.x ) {
+//               printf( "(%d; %d)\n", x, y );
+               if( saiLam > 0 ) {
+                  y++;
+                  saiLam -= (cachX << 1);
+               }
+               saiLam += cachY << 1;
+               
+               x++;
+            }
+         }
+         else {
+            short saiLam = (cachX << 1) - cachY;
+            
+            while( y <= diem1.y ) {
+//               printf( "(%d; %d)\n", x, y );
+               if( saiLam > 0 ) {
+                  x++;
+                  saiLam -= (cachY << 1);
+               }
+               saiLam += cachX << 1;
+               
+               y++;
+            }
+         }
+      }
+      else {           // ---- ∆x < 0; ∆y > 0
+         short cachX_tuyetDoi = -cachX;
+         if( cachY <= cachX_tuyetDoi ) {
+            short saiLam = (cachY << 1) + cachX;
+            
+            while( x >= diem1.x ) {
+//               printf( "(%d; %d)\n", x, y );
+               if( saiLam > 0 ) {
+                  y++;
+                  saiLam += (cachX << 1);
+               }
+               saiLam += cachY << 1;
+               
+               x--;
+            }
+         }
+         else {
+            short saiLam = -(cachX << 1) - cachY;
+            
+            while( y <= diem1.y ) {
+//               printf( "(%d; %d)\n", x, y );
+               if( saiLam > 0 ) {
+                  x--;
+                  saiLam -= (cachY << 1);
+               }
+               saiLam -= cachX << 1;
+               
+               y++;
+       
+            }
+       
+         }
+      }
+      
    }
 }
 

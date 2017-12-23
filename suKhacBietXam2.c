@@ -134,7 +134,7 @@ int main( int argc, char **argv ) {
          unsigned char *anhSuKhacBiet = tinhSuKhacBietXam( duLieuTep0, duLieuTep1, beRongTep0, beCaoTep0, kDUNG );
          printf( "Đang bộ Lọc ảnh sự khác biệt\n" );
          unsigned char *anhBoLocTrungBinh = boLocTrungBinh( anhSuKhacBiet, beRongTep0, beCaoTep0, 75 );
-//         unsigned char *anhBoLocTrungBinhDoc = boLocTrungBinhDoc( anhBoLocTrungBinh, beRongTep0, beCaoTep0, 70  );
+         unsigned char *anhBoLocTrungBinhDoc = boLocTrungBinhDoc( anhBoLocTrungBinh, beRongTep0, beCaoTep0, 70  );
  //        tìmDiemCaoNgang( anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0, 10 );
  //        tìmDiemThapNgang( anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0, 10 );
  //        unsigned char *anhToMau = toMauAnh( anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0 );
@@ -211,7 +211,7 @@ int main( int argc, char **argv ) {
          *dauTen = 0x00;
 
          printf( "Tên két qủa: %s\n", tenAnhSuKhacBiet );
-         luuAnhPNG( tenAnhSuKhacBiet, anhBoLocTrungBinh, beRongTep0, beCaoTep0 );
+         luuAnhPNG( tenAnhSuKhacBiet, anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0 );
 
          free( anhSuKhacBiet );
          free( anhBoLocTrungBinh );
@@ -1071,7 +1071,6 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             soCot++;
 
          }
-//exit(0);
 
          soHang++;
       }
@@ -1083,7 +1082,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
       soHang = 0;
 
       while( soHang < phanNuaBoLoc ) {
-         
+//         printf( "soHang %d - ", soHang );
          unsigned short soCot = 0;
          int diaChiAnh = beRong*soHang << 2;
          while( soCot < beRong ) {
@@ -1092,17 +1091,18 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             unsigned int giaTriLocXanh = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
             unsigned int giaTriLocLuc = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
             unsigned int giaTriLocDo = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
-
+ //           printf( " %d diaChiAnh %d  soLuongDiemAnhNgoai %d (%d)\n", soCot, diaChiAnh, soLuongDiemAnhNgoai,  beRongBoLoc - soLuongDiemAnhNgoai );
             // ---- chỉ số trong bộ lọc (phạm vi trong 0 tới beRongBoLoc)
-            short chiSoHangBoLoc = phanNuaBoLoc - soHang;
+            short chiSoHangBoLoc = 0;
             
             // ---- địa chỉ trong ảnh để bắt đầu bộ lọc
-            int diaChiDeBoLoc = diaChiAnh;
+            int diaChiDeBoLoc = soCot << 2;
             
-            while( chiSoHangBoLoc < beRongBoLoc ) {
+            while( chiSoHangBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
                giaTriLocDo += anhBoLoc[diaChiDeBoLoc];
                giaTriLocLuc += anhBoLoc[diaChiDeBoLoc+1];
                giaTriLocXanh += anhBoLoc[diaChiDeBoLoc+2];
+//               printf( "   chiSoHangBoLoc %d diaChiDeBoLoc %d\n", chiSoHangBoLoc, diaChiDeBoLoc );
                chiSoHangBoLoc++;
                diaChiDeBoLoc += cachMotHang;
             }
@@ -1111,13 +1111,14 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             anhBoLoc1[diaChiAnh+1] = giaTriLocLuc/beRongBoLoc;
             anhBoLoc1[diaChiAnh+2] = giaTriLocDo/beRongBoLoc;
             anhBoLoc1[diaChiAnh+3] = 0xff;
- //           printf( "diaChiAnh %d  soLuongDiemAnhNgoai %d\n", diaChiAnh, soLuongDiemAnhNgoai );
+
             soCot++;
             diaChiAnh += 4;
          }
+
          soHang++;
       }
-
+//exit(0);
       soHangCuoi = beCao - phanNuaBoLoc;
 
       while( soHang < soHangCuoi ) {
@@ -1220,11 +1221,49 @@ unsigned char *boLocTrungBinhDoc( unsigned char *anh, unsigned int beRong, unsig
    }
    
    if( anhBoLoc ) {
+      
+      int cachMotHang = beRong << 2;   // số lượng byte giữa các hàng, cùng cột
+      unsigned int diaChiAnh = 0;
+      unsigned int soHang = 0;
+
+      while( soHang < phanNuaBoLoc ) {
+         
+         unsigned short soCot = 0;
+         int diaChiAnh = beRong*soHang << 2;
+         while( soCot < beRong ) {
+            unsigned char giaTriAnhCanhDuoi = anh[diaChiAnh];
+            unsigned short soLuongDiemAnhNgoai = (phanNuaBoLoc - soHang);
+            unsigned int giaTriLocXanh = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            unsigned int giaTriLocLuc = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            unsigned int giaTriLocDo = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            
+            // ---- chỉ số trong bộ lọc (phạm vi trong 0 tới beRongBoLoc)
+            short chiSoHangBoLoc = 0;
+            
+            // ---- địa chỉ trong ảnh để bắt đầu bộ lọc
+            int diaChiDeBoLoc = soCot << 2;
+            
+            while( chiSoHangBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
+               giaTriLocDo += anh[diaChiDeBoLoc];
+               giaTriLocLuc += anh[diaChiDeBoLoc+1];
+               giaTriLocXanh += anh[diaChiDeBoLoc+2];
+               chiSoHangBoLoc++;
+               diaChiDeBoLoc += cachMotHang;
+            }
+            
+            anhBoLoc[diaChiAnh] = giaTriLocXanh/beRongBoLoc;
+            anhBoLoc[diaChiAnh+1] = giaTriLocLuc/beRongBoLoc;
+            anhBoLoc[diaChiAnh+2] = giaTriLocDo/beRongBoLoc;
+            anhBoLoc[diaChiAnh+3] = 0xff;
+            //           printf( "diaChiAnh %d  soLuongDiemAnhNgoai %d\n", diaChiAnh, soLuongDiemAnhNgoai );
+            soCot++;
+            diaChiAnh += 4;
+         }
+         soHang++;
+      }
 
       // ==== bộ lọc hượng dọc
-      unsigned int soHang = phanNuaBoLoc;
       unsigned int soHangCuoi = beCao - phanNuaBoLoc;
-      int cachMotHang = beRong << 2;   // số lượng byte giữa các hàng, cùng cột
       
       while( soHang < soHangCuoi ) {
          
@@ -1262,6 +1301,45 @@ unsigned char *boLocTrungBinhDoc( unsigned char *anh, unsigned int beRong, unsig
          };
          soHang++;
       }
+      
+      while( soHang < beCao ) {
+         
+         unsigned short soCot = 0;
+         int diaChiAnh = beRong*soHang << 2;
+         while( soCot < beRong ) {
+            unsigned char giaTriAnhCanhDuoi = anh[diaChiAnh];
+            unsigned short soLuongDiemAnhNgoai = phanNuaBoLoc - (beCao - soHang - 1);
+            unsigned int giaTriLocXanh = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            unsigned int giaTriLocLuc = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            unsigned int giaTriLocDo = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
+            // ---- chỉ số trong bộ lọc (phạm vi trong 0 tới beRongBoLoc)
+            short chiSoHangBoLoc = 0;
+            
+            // ---- địa chỉ trong ảnh để bắt đầu bộ lọc
+            short hangTuongDoi = -phanNuaBoLoc;
+            int diaChiDeBoLoc = diaChiAnh + (hangTuongDoi*beRong << 2);
+            
+            while( chiSoHangBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
+               giaTriLocDo += anh[diaChiDeBoLoc];
+               giaTriLocLuc += anh[diaChiDeBoLoc+1];
+               giaTriLocXanh += anh[diaChiDeBoLoc+2];
+               
+               chiSoHangBoLoc++;
+               diaChiDeBoLoc += cachMotHang;
+            }
+            
+            anhBoLoc[diaChiAnh] = giaTriLocXanh/beRongBoLoc;
+            anhBoLoc[diaChiAnh+1] = giaTriLocLuc/beRongBoLoc;
+            anhBoLoc[diaChiAnh+2] = giaTriLocDo/beRongBoLoc;
+            anhBoLoc[diaChiAnh+3] = 0xff;
+            
+            soCot++;
+            diaChiAnh += 4;
+         }
+         
+         soHang++;
+      }
+
 
    }
    else {

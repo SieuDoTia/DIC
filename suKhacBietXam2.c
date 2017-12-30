@@ -114,8 +114,10 @@ void luuCatNgang( unsigned char *anhGoc, unsigned int beRong, unsigned int beCao
 
 /* Tình trung bình và phương sai */
 float tinhGiaTriTrungBinhAnh_toanBo( unsigned char *anh, unsigned int beRong, unsigned int beCao, float *tuongQuan );
-void tuongQuanGiuaHaiAnh( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
+float *tuongQuanGiuaHaiAnh( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
                            unsigned char *anhPhu, unsigned int beRongPhu, unsigned int beCaoPhu );
+float *tuongQuanGiuaHaiAnh_cach( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
+                              unsigned char *anhPhu, unsigned int beRongPhu, unsigned int beCaoPhu, unsigned char cach );
 
 /* Lưu ảnh PNG */
 void luuAnhPNG_BGRO( char *tenTep, unsigned char *suKhacBiet, unsigned int beRong, unsigned int beCao );
@@ -136,7 +138,7 @@ int main( int argc, char **argv ) {
    
    float phuongSai;
    float trungBinh = tinhGiaTriTrungBinhAnh_toanBo( duLieuTep, beRongTep, beCaoTep, &phuongSai );
-//   printf( "%s  berong %d beCao %d  Trung Binh Phu %5.3f  phuong sai %5.3f\n", argv[1], beRongTep, beCaoTep, trungBinh, phuongSai );
+   printf( "%s  berong %d beCao %d  Trung Binh Phu %5.3f  phuong sai %5.3f\n", argv[1], beRongTep, beCaoTep, trungBinh, phuongSai );
 
    unsigned int beRongTepPhu;
    unsigned int beCaoTepPhu;
@@ -147,13 +149,11 @@ int main( int argc, char **argv ) {
    float trungBinhPhu = tinhGiaTriTrungBinhAnh_toanBo( duLieuTepPhu, beRongTepPhu, beCaoTepPhu, &phuongSaiPhu );
    printf( "%s  berong %d beCao %d  Trung Binh Phu %5.3f  phuong sai %5.3f\n", argv[2], beRongTepPhu, beCaoTepPhu, trungBinhPhu, phuongSaiPhu );
    
-   tuongQuanGiuaHaiAnh( duLieuTep, beRongTep, beCaoTep, duLieuTepPhu, beRongTepPhu, beCaoTepPhu );
-
+//   tuongQuanGiuaHaiAnh( duLieuTep, beRongTep, beCaoTep, duLieuTepPhu, beRongTepPhu, beCaoTepPhu );
+   tuongQuanGiuaHaiAnh_cach( duLieuTep, beRongTep, beCaoTep, duLieuTepPhu, beRongTepPhu, beCaoTepPhu, 20 );
 
    exit(1);
    // ----------------
-
-   
 
    if( argc > 2 ) {
       unsigned int beRongTep0;
@@ -1517,15 +1517,15 @@ unsigned char *catAnh( unsigned char *anhGoc, unsigned int beRongGoc, unsigned i
 
 #pragma mark ---- Tìm Đạo Cao Và Thấp
 
-void tìmDiemCaoNgang2( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach ) {
+void tìmDiemCaoNgang3( unsigned char *tuongQuan, unsigned int beRong, unsigned int beCao, unsigned char cach ) {
    
    unsigned int soHang = 1140;  // Thử nghiệm, tìma các điểm cao trong ảnh và đi xuông theo nó
    
    // ---- TÌM KHỞI ĐẦU CHo CÁC ĐƯỜNG
    Diem mangDiemCao[64];  // <---- nên dùng malloc không?
    Diem mangDiemThap[64];  // <---- nên dùng malloc không?
-   unsigned char giaTriThap = 255;
-   unsigned char giaTriCao = 0;
+   float giaTriThap = 1.0;
+   float giaTriCao = -1.0;
    
    unsigned short chiSoDiemCao = 0;
    unsigned short chiSoDiemThap = 0;
@@ -1535,7 +1535,7 @@ void tìmDiemCaoNgang2( unsigned char *anh, unsigned int beRong, unsigned int be
 
    while( soCot < beRong - (cach << 1) ) {
 
-      unsigned char giaTri = anh[diaChiAnh];
+      float giaTri = tuongQuan[diaChiAnh];
       
       if( giaTri < giaTriThap ) {
          ;
@@ -2130,7 +2130,7 @@ unsigned char *mauAnhThungLungSin_2chieu( unsigned short beRong ) {
    
    return anhThungLung;
 }
-
+/*
 unsigned char *mauAnhNuiSin_1chieu( unsigned short beRong ) {
 
    unsigned char *anhNui = malloc( beRong << 10 ); // 256 << 2
@@ -2157,7 +2157,7 @@ unsigned char *mauAnhThungLungSin_1chieu( unsigned short beRong ) {
    }
    
    return anhThungLung;
-}
+} */
 
 #pragma mark ---- Tính Giá Trị Trung Bình
 float tinhGiaTriTrungBinhAnh_toanBo( unsigned char *anh, unsigned int beRong, unsigned int beCao, float *tuongQuan ) {
@@ -2251,7 +2251,7 @@ float tinhGiaTriTrungBinhAnh_diaPhuong( unsigned char *anh, unsigned int *anhBin
 //        +------------------------------->|
 
 // Cần thần chỉ dùng kinh ĐỎ để tính tương quan
-void tuongQuanGiuaHaiAnh( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
+float *tuongQuanGiuaHaiAnh( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
                           unsigned char *anhPhu, unsigned int beRongPhu, unsigned int beCaoPhu ) {
    
    // ---- chỉ cần làm này một lần
@@ -2314,16 +2314,91 @@ void tuongQuanGiuaHaiAnh( unsigned char *anhChanh, unsigned int beRongChanh, uns
             soHangPhu++;
          }
          tuongQuan[diaChiTuongQuan] = (giaTriTuongQuan/soLuongDiemAnh - trungBinhChanh*trungBinhPhu)/sqrtf(phuongSaiPhu*phuongSaiChanh);
-         if( tuongQuan[diaChiTuongQuan] > 0.7f )
-         printf( "%d %d  tuongQuan %5.3f\n", soCotTuongQuan, soHangTuongQuan, tuongQuan[diaChiTuongQuan] );
+  //__       if( tuongQuan[diaChiTuongQuan] > 0.7f )
+  //       printf( "%d %d  tuongQuan %5.3f\n", soCotTuongQuan, soHangTuongQuan, tuongQuan[diaChiTuongQuan] );
          diaChiTuongQuan++;
          soCotTuongQuan++;
       }
       soHangTuongQuan++;
    }
 
+   return tuongQuan;
 }
 
+// Cần thần chỉ dùng kinh ĐỎ để tính tương quan
+float *tuongQuanGiuaHaiAnh_cach( unsigned char *anhChanh, unsigned int beRongChanh, unsigned int beCaoChanh,
+                         unsigned char *anhPhu, unsigned int beRongPhu, unsigned int beCaoPhu, unsigned char cach ) {
+   
+   // ---- chỉ cần làm này một lần
+   float phuongSaiPhu;
+   float trungBinhPhu = tinhGiaTriTrungBinhAnh_toanBo( anhPhu, beRongPhu, beCaoPhu, &phuongSaiPhu );
+   // ---- tính bình của ảnh, để chỉ cần tính một lần
+   unsigned int diaChiAnhCuoi = beRongChanh*beCaoChanh;
+   unsigned int *anhChanhBinh = malloc( diaChiAnhCuoi*sizeof( float ) );
+   unsigned int diaChiAnh = 0;
+   while( diaChiAnh < diaChiAnhCuoi ) {
+      unsigned short giaTriAnhChanh = anhChanh[diaChiAnh << 2];
+      anhChanhBinh[diaChiAnh] = giaTriAnhChanh*giaTriAnhChanh;
+      diaChiAnh++;
+   }
+   //   printf( "  anhPhu %5.3f  phuongSai %5.3f\n", trungBinhPhu, phuongSaiPhu );
+   
+   
+   unsigned int beRongTuongQuan = (beRongChanh - beRongPhu + 1);
+   unsigned int beCaoTuongQuan = (beCaoChanh - beCaoPhu + 1);
+   float *tuongQuan = malloc( beRongTuongQuan*beCaoTuongQuan * sizeof( float ) );   // cần chia cachBinh?
+   float soLuongDiemAnh = beRongPhu*beCaoPhu;
+   
+   unsigned int diaChiAnhChanh = 0;
+   unsigned int diaChiAnhPhu = 0;
+   
+   unsigned int diaChiTuongQuan = 0;
+   unsigned soHangTuongQuan = 0;
+   while( soHangTuongQuan < beCaoTuongQuan ) {
+      //      printf( "%d\n", soHangTuongQuan );
+      unsigned int soCotTuongQuan = 0;
+      while( soCotTuongQuan < beRongTuongQuan ) {
+         
+         float giaTriTuongQuan = 0.0f;
+         
+         // -----
+         float phuongSaiChanh;
+         float trungBinhChanh = tinhGiaTriTrungBinhAnh_diaPhuong( anhChanh, anhChanhBinh, beRongChanh, beCaoChanh, soCotTuongQuan, soHangTuongQuan, beRongPhu, beCaoPhu, &phuongSaiChanh );
+         //         printf( "%d %d  anhChanh %5.3f  phuongSai %5.3f ", soHangTuongQuan, soCotTuongQuan, trungBinhChanh, phuongSaiChanh );
+         
+         // ---- quét qua anh
+         unsigned int diaChiPhu = 0;
+         unsigned int soHangPhu = 0;
+         unsigned int soHangChanh = soHangTuongQuan;
+         while( soHangPhu < beCaoPhu ) {
+            
+            unsigned int soCotPhu = 0;
+            unsigned int soCotChanh = soCotTuongQuan;
+            unsigned int diaChiChanh = (soHangChanh*beRongChanh + soCotChanh) << 2;
+            
+            while( soCotPhu < beRongPhu ) {
+               giaTriTuongQuan += anhPhu[diaChiPhu]*anhChanh[diaChiChanh];
+               //              printf("   phu %d (%d; %d)  chanh %d (%d; %d)\n", anhPhu[diaChiPhu], soCotPhu, soHangPhu, anhChanh[diaChiChanh], soCotChanh, soHangChanh );
+               diaChiPhu += 4;
+               diaChiChanh += 4;
+               soCotPhu++;
+               soCotChanh++;
+            }
+            // ----
+            soHangChanh++;
+            soHangPhu++;
+         }
+         tuongQuan[diaChiTuongQuan] = (giaTriTuongQuan/soLuongDiemAnh - trungBinhChanh*trungBinhPhu)/sqrtf(phuongSaiPhu*phuongSaiChanh);
+    //     if( tuongQuan[diaChiTuongQuan] > 0.3f )
+ //           printf( "%d %d  %5.3f\n", soCotTuongQuan, soHangTuongQuan, tuongQuan[diaChiTuongQuan] );
+         diaChiTuongQuan++;
+         soCotTuongQuan++;
+      }
+      soHangTuongQuan += cach;
+   }
+ 
+   return tuongQuan;
+}
 
 #pragma mark ==== Tệp PNG
 // ---- thứ dữ liệu màu trong tập tin

@@ -12,6 +12,7 @@
 #import <stdlib.h>
 #import <math.h>
 #import <zlib.h>   // tải zlib
+#import "KyTu.h"
 
 
 #define kSAI  0
@@ -104,6 +105,9 @@ unsigned char *catAnh( unsigned char *anh, unsigned int beRong, unsigned beCao, 
 
 
 void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1, unsigned int mau );
+void veSoCai( char *xauSo, unsigned short x, unsigned short y, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
+void chepKyTu( unsigned int *kyTu, unsigned short x, unsigned short y, unsigned char beRong, unsigned char beCao, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
+
 
 /* Lưu ảnh PNG */
 void luuAnhPNG( char *tenTep, unsigned char *suKhacBiet, unsigned int beRong, unsigned int beCao );
@@ -2558,6 +2562,94 @@ void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem 
    }
 }
 
+#pragma mark ---- Vẽ Số Và Chữ Cái
+void veSoCai( char *xauSo, unsigned short x, unsigned short y, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh ) {
+
+   char kyTuSo = xauSo[0];
+   unsigned char chiSoXau = 0;
+   
+   while( kyTuSo ) {
+
+      kyTuSo = xauSo[chiSoXau];
+      printf( " %c", kyTuSo );
+      if( kyTuSo == '0' )
+         chepKyTu( so_0__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '1' )
+         chepKyTu( so_1__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '2' )
+         chepKyTu( so_2__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '3' )
+         chepKyTu( so_3__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '4' )
+         chepKyTu( so_4__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '5' )
+         chepKyTu( so_5__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '6' )
+         chepKyTu( so_6__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '7' )
+         chepKyTu( so_7__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '8' )
+         chepKyTu( so_8__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == '9' )
+         chepKyTu( so_9__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      else if( kyTuSo == ',' )
+         chepKyTu( dauPhay__16, x, y, 16, 16, anh, beRongAnh, beCaoAnh );
+      chiSoXau++;
+      x += 16;
+   }
+   printf( "\n" );
+}
+
+void chepKyTu( unsigned int *kyTu, unsigned short x, unsigned short y, unsigned char beRong, unsigned char beCao, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh ) {
+   
+   // ---- xem phạm vi trước
+   if( x >= beRongAnh )
+      return;
+   if( y >= beCaoAnh )
+      return;
+
+   // ----
+   unsigned char cotCuoi = beRong;
+   unsigned char hangCuoi = beCao;
+
+   if( x + beRong > beRongAnh )
+      cotCuoi = beRongAnh - x;
+   
+   if( y + beCao > beCaoAnh )
+      cotCuoi = beCaoAnh - y;
+   
+   unsigned char soHang = 0;
+   while( soHang < hangCuoi ) {
+      unsigned char soCot = 0;
+      unsigned int diaChiAnh = (beRongAnh*y + x) << 2;
+      unsigned int diaChiKyTu = soHang*beRong;
+      while( soCot < cotCuoi ) {
+         unsigned int mauKyTu = kyTu[diaChiKyTu];
+
+         unsigned char doDuc = mauKyTu & 0xff;
+         unsigned char doTrong = 255 - doDuc;
+         unsigned char mauDo = (anh[diaChiAnh]*doTrong + (mauKyTu >> 24)*doDuc) >> 8;
+         unsigned char mauLuc = (anh[diaChiAnh+1]*doTrong + ((mauKyTu >> 16) & 0xff)*doDuc) >> 8;
+         unsigned char mauXanh = (anh[diaChiAnh+2]*doTrong + ((mauKyTu >> 8) & 0xff)*doDuc) >> 8;
+//         printf( "mau %08x   mauDo %d  mauLuc %d  mauXanh %d  doDuc %d  doTrong %d\n", mauKyTu, mauDo, mauLuc, mauXanh, doDuc, doTrong );
+//         printf( "  anh[diaChiAnh] %d  \n", anh[diaChiAnh] );
+            //      exit(9);
+   
+         anh[diaChiAnh] = mauDo;
+         anh[diaChiAnh+1] = mauLuc;
+         anh[diaChiAnh+2] = mauXanh;
+
+         soCot++;
+         diaChiKyTu++;
+         diaChiAnh += 4;
+      }
+      y++;
+      soHang++;
+   }
+   
+}
+
+
 #pragma mark ---- Lật Ngược
 void lậtNgược( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
    
@@ -2586,17 +2678,20 @@ typedef struct {
 //unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
 //unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
 unsigned int mauChoSo( float so );
+char *xauChoCao( float cap );
 //void phanTichCacNet( Net *mangNet, unsigned char soLuongNet );
 
 unsigned char danhSachMau[] = {
-   0xff, 0xff, 0x00, 0xff,
-   0xff, 0x7f, 0x00, 0xff,
-   0xff, 0x00, 0x00, 0xff,
-   0xff, 0x00, 0x7f, 0xff,
-   0x7f, 0x00, 0xff, 0xff,
-   0x00, 0xff, 0xff, 0xff,
-   0x00, 0x7f, 0xff, 0xff,
-   0x00, 0xff, 0xff, 0xff,  //
+   0xff, 0xff, 0x00, 0xff,  // 0
+   0xff, 0x7f, 0x00, 0xff,  // 1
+   0xff, 0x00, 0x00, 0xff,  // 2
+   0xff, 0x00, 0x7f, 0xff,  // 3
+   0x7f, 0x00, 0xff, 0xff,  // 4
+   0x00, 0xff, 0xff, 0xff,  // 5
+   0x00, 0x7f, 0xff, 0xff,  // 6
+   0x00, 0xff, 0xff, 0xff,  // 7
+   0x00, 0xff, 0x7f, 0xff,  // 8
+   0x00, 0xff, 0x00, 0xff,  // 9
 };
 
 
@@ -2607,10 +2702,10 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
    if( anhToMau ) {
       unsigned int diaChiAnh = 0;
       while( diaChiAnh < beRong*beCao << 2 ) {
-         anhToMau[diaChiAnh] = 0xff;
-         anhToMau[diaChiAnh+1] = 0xff;
-         anhToMau[diaChiAnh+2] = 0xff;
-         anhToMau[diaChiAnh+3] = 0xff;
+         anhToMau[diaChiAnh] = 255;
+         anhToMau[diaChiAnh+1] = 255;
+         anhToMau[diaChiAnh+2] = 255;
+         anhToMau[diaChiAnh+3] = 255;
          diaChiAnh += 4;
       }
    /*
@@ -2634,6 +2729,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       while( chiSoNet < soLuongNetCao ) {
          printf( "%d CAO mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
          if( mangNetCao[chiSoNet].docTrungBinh < 10 ) {
+            // ---- vẽ nét
             unsigned int mau = mauChoSo( mangNetCao[chiSoNet].cap );
             unsigned char chiSoDiem = 1;
             unsigned short soLuongDiem = mangNetCao[chiSoNet].soLuongDiem;
@@ -2642,6 +2738,12 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
                        mau );
                chiSoDiem++;
             }
+            
+            // --- vẽ số cấp của nét
+            short x = mangNetCao[chiSoNet].mangDiem[0].x - 24;
+            short y = mangNetCao[chiSoNet].mangDiem[0].y + 50;
+            printf( "  %d; %d\n", x, y );
+            veSoCai( xauChoCao( mangNetCao[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
          }
 
          chiSoNet++;
@@ -2651,6 +2753,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       while( chiSoNet < soLuongNetThap ) {
          printf( "%d THAP mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
          if( mangNetThap[chiSoNet].docTrungBinh < 10 ) {
+            // ---- vẽ nét
             unsigned int mau = mauChoSo( mangNetThap[chiSoNet].cap );
             unsigned char chiSoDiem = 1;
             unsigned short soLuongDiem = mangNetThap[chiSoNet].soLuongDiem;
@@ -2659,10 +2762,15 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
                        mau );
                chiSoDiem++;
             }
+            
+            // --- vẽ số cấp của nét
+            short x = mangNetThap[chiSoNet].mangDiem[0].x - 24;
+            short y = mangNetThap[chiSoNet].mangDiem[0].y + 50;
+            printf( "  %d; %d\n", x, y );
+            veSoCai( xauChoCao( mangNetThap[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
          }
          chiSoNet++;
       }
-
 
    }
    else {
@@ -2689,6 +2797,50 @@ unsigned int mauChoSo( float so ) {
    unsigned int mauSuyNoi = mauDo << 24 | mauLuc << 16 | mauXanh << 8 | mauDuc;
       printf( "chiSoMau %d  mau %x  soPhan %5.3f\n", chiSoMau, mauSuyNoi, phanSo );
    return mauSuyNoi;
+}
+
+char *xauChoCao( float cap ) {
+   
+   if( cap == 0.5f )
+      return "0,5";
+   else if( cap == 1.0f )
+      return "1,0";
+   else if( cap == 1.5f )
+      return "1,5";
+   else if( cap == 2.0f )
+      return "2,0";
+   else if( cap == 2.5f )
+      return "2,5";
+   else if( cap == 3.0f )
+      return "3,0";
+   else if( cap == 3.5f )
+      return "3,5";
+   else if( cap == 4.0f )
+      return "4,0";
+   else if( cap == 4.5f )
+      return "4,5";
+   else if( cap == 5.0f )
+      return "5,0";
+   else if( cap == 5.5f )
+      return "5,5";
+   else if( cap == 6.0f )
+      return "6,0";
+   else if( cap == 6.5f )
+      return "6,5";
+   else if( cap == 7.0f )
+      return "7,0";
+   else if( cap == 7.5f )
+      return "7,5";
+   else if( cap == 8.0f )
+      return "8,0";
+   else if( cap == 8.5f )
+      return "8,5";
+   else if( cap == 9.0f )
+      return "1,0";
+   else if( cap == 9.5f )
+      return "1,5";
+   else
+      return "10+";
 }
 /*
 void phanTichCacNet( Net *mangNet, unsigned char soLuongNet ) {

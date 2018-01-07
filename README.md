@@ -18,11 +18,15 @@ Hai tấm ảnh ví dụ góc để tính gợn sóng
  - Moire_10.png
  
 ==== Chương trình C cho Moiré ====
- - suKhacBiet.c:
- - suKhacBiet2.c: đang phát triển cách mới để kiếm các nét gợn sóng
+LƯU Ý: Chỉ được dùng với ảnh PNG 32 bit, phải có 2 ảnh khác nhau để làm ảnh Moiré (ảnh gợn)
+ - suKhacBiet.c: xài cái cho làm công việc
+ - suKhacBiet2.c: thử nghiệm kỷ thuật mới
+ - KyTu.h: có ký tự cho số 
  
    Biến dịch:
 gcc -lz sukhacbietXam.c
 
    Chạy:
+./a.out <tên ảnh 0>.png <tê ảnh 1>.png   
+   Ví dụ:
 ./a.out Moire_00.png Moire_10.png

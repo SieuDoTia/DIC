@@ -1520,9 +1520,9 @@ unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigne
       diaChiAnh += cach << 2;
    }
 
-   printf( "số lượng điểm %d\n", chiSoMangToaDo );
+//   printf( "số lượng điểm %d\n", chiSoMangToaDo );
    
-   toMauCacDiem( anh, beRong, beCao, mangDiemThichThu, chiSoMangToaDo, 0x0000ffff );
+//   toMauCacDiem( anh, beRong, beCao, mangDiemThichThu, chiSoMangToaDo, 0x0000ffff );
 
    // ==== ĐI THEO DÕI ĐƯỜNG
    *mangNet = malloc( sizeof( Net )*chiSoMangToaDo );
@@ -1597,7 +1597,7 @@ unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigne
          else
             cap -= 1.0f;
 
-         printf( " CAO soDiem %d  cap %5.3f\n", soDiem, mangGiuNet[chiSoMangNet].cap );
+         printf( " CAO soDiem %d  cap %5.3f  docTB %5.3f\n", soDiem, mangGiuNet[chiSoMangNet].cap, mangGiuNet[chiSoMangNet].cap );
          chiSoMangNet++;
       }
 
@@ -1640,9 +1640,9 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
       diaChiAnh += cach << 2;
    }
    
-   printf( "số lượng điểm %d\n", chiSoMangToaDo );
+//   printf( "số lượng điểm %d\n", chiSoMangToaDo );
    
-   toMauCacDiem( anh, beRong, beCao, mangDiemThichThu, chiSoMangToaDo, 0x00ff00ff );
+//   toMauCacDiem( anh, beRong, beCao, mangDiemThichThu, chiSoMangToaDo, 0x00ff00ff );
    
    // ==== ĐI THEO DÕI ĐƯỜNG
    *mangNet = malloc( sizeof( Net)*chiSoMangToaDo );
@@ -1714,7 +1714,7 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
          else
             cap -= 1.0f;
          
-         printf( " THAP soDiem %d  cap %5.3f\n", soDiem, mangGiuNet[chiSoMangNet].cap );
+         printf( " THAP soDiem %d  cap %5.3f  docTB %5.3f\n", soDiem, mangGiuNet[chiSoMangNet].cap, mangGiuNet[chiSoMangNet].docTrungBinh );
          chiSoMangNet++;
       }
 //      printf( "  soDiem %d  xu ly %d\n", soDiem, mangDiemThichThu[soDiem].xuLyRoi );
@@ -1888,8 +1888,8 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
       else
          mau = (dem << 26) | 0xff00ff;  // tô màu lục
 
- //     toMauCacDiem( anh, beRong, beCao, &diemMoi, 1, mau );
- //     veDuong( anh, beRong, beCao, diem0, diemMoi, mau );
+//      toMauCacDiem( anh, beRong, beCao, &diemMoi, 1, mau );
+//      veDuong( anh, beRong, beCao, diem0, diemMoi, mau );
       
       diem0 = diemMoi;
       net->mangDiem[dem] = diem0;
@@ -1900,6 +1900,7 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
 
    net->soLuongDiem = dem;
    net->docTrungBinh = docNet/(float)(dem - 1);
+   printf( " net->docTrungBinh %5.3f\n", net->docTrungBinh );
    // ---- xem đã đến từ hướng này chưa
    return diem0;
 }
@@ -2856,7 +2857,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       unsigned char chiSoNet = 0;
       while( chiSoNet < soLuongNetCao ) {
          printf( "%d CAO mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
-         if( mangNetCao[chiSoNet].docTrungBinh < 10 ) {
+         if( mangNetCao[chiSoNet].docTrungBinh < 5.0f ) {
             // ---- vẽ nét
             unsigned int mau = mauChoSo( mangNetCao[chiSoNet].cap );
             unsigned char chiSoDiem = 1;
@@ -2882,7 +2883,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       chiSoNet = 0;
       while( chiSoNet < soLuongNetThap ) {
          printf( "%d THAP mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
-         if( mangNetThap[chiSoNet].docTrungBinh < 10 ) {
+         if( mangNetThap[chiSoNet].docTrungBinh < 5.0f ) {
             // ---- vẽ nét
             unsigned int mau = mauChoSo( mangNetThap[chiSoNet].cap );
             unsigned char chiSoDiem = 1;
@@ -2932,7 +2933,7 @@ void toGiuaNet( unsigned char *anhDoSang, unsigned char *anhToMau, float *anhGiu
       unsigned short soCot = 0;
       while( soCot < beRong ) {
          float cap = anhGiupToMau[diaChiAnh];
-
+         printf( "%d  doSang %d\n", soCot, anhDoSang[diaChiAnh << 2] );
          if( cap > -1.0f ) {
             mangSoCotNet[chiSoNet] = soCot;
             mangDoSang[chiSoNet] = anhDoSang[diaChiAnh << 2];

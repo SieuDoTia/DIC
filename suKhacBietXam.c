@@ -2804,6 +2804,9 @@ typedef struct {
 /* Tìm Đường */
 //unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
 //unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
+void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet );
+void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet );
+
 unsigned int mauChoSoThuc( float so );
 char *xauChoCao( float cap );
 void toGiuaNet( unsigned char *anhDoSang, unsigned char *anhToMau, float *anhGiupToMau, unsigned int beRong, unsigned int beCao );
@@ -2853,60 +2856,12 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       unsigned char soLuongNetThap = tìmDiemThapNgang( anh, beRong, beCao, 10, &mangNetThap );
       
       printf( "toMauAnh: soLuongNetCao %d  soLuongNetThap %d\n", soLuongNetCao, soLuongNetThap );
-      
-      unsigned char chiSoNet = 0;
-      while( chiSoNet < soLuongNetCao ) {
-         printf( "%d CAO mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
-         if( mangNetCao[chiSoNet].docTrungBinh < 5.0f ) {
-            // ---- vẽ nét
-            unsigned int mau = mauChoSoThuc( mangNetCao[chiSoNet].cap );
-            unsigned char chiSoDiem = 1;
-            unsigned short soLuongDiem = mangNetCao[chiSoNet].soLuongDiem;
-            while( chiSoDiem < soLuongDiem ) {
-               veDuong( anhToMau, beRong, beCao, mangNetCao[chiSoNet].mangDiem[chiSoDiem], mangNetCao[chiSoNet].mangDiem[chiSoDiem-1],
-                       mau );
-               veDuongCap( anhGiupToMau, beRong, beCao, mangNetCao[chiSoNet].mangDiem[chiSoDiem], mangNetCao[chiSoNet].mangDiem[chiSoDiem-1],
-                       mangNetCao[chiSoNet].cap );
-               chiSoDiem++;
-            }
-            
-            // --- vẽ số cấp của nét
-            short x = mangNetCao[chiSoNet].mangDiem[0].x - 24;
-            short y = mangNetCao[chiSoNet].mangDiem[0].y + 50;
-            printf( "  %d; %d\n", x, y );
-            veSoCai( xauChoCao( mangNetCao[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
-         }
-
-         chiSoNet++;
-      }
-      
-      chiSoNet = 0;
-      while( chiSoNet < soLuongNetThap ) {
-         printf( "%d THAP mangNetThap.docTrungBinh %5.3f\n", chiSoNet, mangNetThap[chiSoNet].docTrungBinh );
-         if( mangNetThap[chiSoNet].docTrungBinh < 5.0f ) {
-            // ---- vẽ nét
-            unsigned int mau = mauChoSoThuc( mangNetThap[chiSoNet].cap );
-            unsigned char chiSoDiem = 1;
-            unsigned short soLuongDiem = mangNetThap[chiSoNet].soLuongDiem;
-            while( chiSoDiem < soLuongDiem ) {
-               veDuong( anhToMau, beRong, beCao, mangNetThap[chiSoNet].mangDiem[chiSoDiem], mangNetThap[chiSoNet].mangDiem[chiSoDiem-1],
-                       mau );
-               veDuongCap( anhGiupToMau, beRong, beCao, mangNetThap[chiSoNet].mangDiem[chiSoDiem], mangNetThap[chiSoNet].mangDiem[chiSoDiem-1],
-                       mangNetThap[chiSoNet].cap );
-               chiSoDiem++;
-            }
-            
-            // --- vẽ số cấp của nét
-            short x = mangNetThap[chiSoNet].mangDiem[0].x - 24;
-            short y = mangNetThap[chiSoNet].mangDiem[0].y + 50;
-            printf( "  %d; %d\n", x, y );
-            veSoCai( xauChoCao( mangNetThap[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
-         }
-         chiSoNet++;
-      }
+      veNetCap( anhGiupToMau, beRong, beCao, mangNetCao, soLuongNetCao );
+      veNetCap( anhGiupToMau, beRong, beCao, mangNetThap, soLuongNetThap );
       
       toGiuaNet( anh, anhToMau, anhGiupToMau, beRong, beCao );
-
+      veNetVaSo( anhToMau, beRong, beCao, mangNetCao, soLuongNetCao );
+      veNetVaSo( anhToMau, beRong, beCao, mangNetThap, soLuongNetThap );
    }
    else {
       printf( "TôMàuẢnh: vấn đề tạo ảnh tô màu\n" );
@@ -2914,6 +2869,57 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
    
    return anhToMau;
 }
+
+
+void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet ) {
+
+   unsigned char chiSoNet = 0;
+   while( chiSoNet < soLuongNet ) {
+
+      if( mangNet[chiSoNet].docTrungBinh < 5.0f ) {
+         // ---- vẽ nét
+         //            unsigned int mau = mauChoSoThuc( mangNetCao[chiSoNet].cap );
+         unsigned char chiSoDiem = 1;
+         unsigned short soLuongDiem = mangNet[chiSoNet].soLuongDiem;
+         while( chiSoDiem < soLuongDiem ) {
+            veDuong( anhToMau, beRong, beCao, mangNet[chiSoNet].mangDiem[chiSoDiem], mangNet[chiSoNet].mangDiem[chiSoDiem-1], 0xffffffff );
+            chiSoDiem++;
+         }
+         
+         // --- vẽ số cấp của nét
+         short x = mangNet[chiSoNet].mangDiem[0].x - 24;
+         short y = mangNet[chiSoNet].mangDiem[0].y + 50;
+         printf( "  %d; %d\n", x, y );
+         veSoCai( xauChoCao( mangNet[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
+      }
+      
+      chiSoNet++;
+   }
+}
+
+void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet ) {
+   
+   unsigned char chiSoNet = 0;
+   while( chiSoNet < soLuongNet ) {
+      if( mangNet[chiSoNet].docTrungBinh < 5.0f ) {
+         // ---- vẽ nét
+         unsigned char chiSoDiem = 1;
+         unsigned short soLuongDiem = mangNet[chiSoNet].soLuongDiem;
+         while( chiSoDiem < soLuongDiem ) {
+            //               veDuong( anhToMau, beRong, beCao, mangNetCao[chiSoNet].mangDiem[chiSoDiem], mangNetCao[chiSoNet].mangDiem[chiSoDiem-1],
+            //                       mau );
+            veDuongCap( anhFloat, beRong, beCao, mangNet[chiSoNet].mangDiem[chiSoDiem], mangNet[chiSoNet].mangDiem[chiSoDiem-1],
+                       mangNet[chiSoNet].cap );
+            chiSoDiem++;
+         }
+
+      }
+      
+      chiSoNet++;
+   }
+}
+
+
 
 
 void toGiuaNet( unsigned char *anhDoSang, unsigned char *anhToMau, float *anhGiupToMau, unsigned int beRong, unsigned int beCao ) {

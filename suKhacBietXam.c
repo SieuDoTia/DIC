@@ -109,12 +109,13 @@ void veDuongCap( float *anh, unsigned int beRong, unsigned int beCao, Diem diem0
 void veSoCai( char *xauSo, unsigned short x, unsigned short y, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
 void chepKyTu( unsigned int *kyTu, unsigned short x, unsigned short y, unsigned char beRong, unsigned char beCao, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
 
+/* Tô Màu */
+unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned int *beRongAnhTo, unsigned int *beCaoAnhTo );
 
 /* Lưu ảnh PNG */
 void luuAnhPNG( char *tenTep, unsigned char *suKhacBiet, unsigned int beRong, unsigned int beCao );
 
-/* Tô Màu */
-unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao );
+
 
 int main( int argc, char **argv ) {
 
@@ -141,8 +142,10 @@ int main( int argc, char **argv ) {
          printf( "Đang bộ Lọc ảnh sự khác biệt hướng dộc\n" );
          unsigned char *anhBoLocTrungBinhDoc = boLocTrungBinhDoc( anhBoLocTrungBinh, beRongTep0, beCaoTep0, 70  );
 
-         unsigned char *anhToMau = toMauAnh( anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0 );
-         luuAnhPNG( "AnhToMau.png", anhToMau, beRongTep0, beCaoTep0 );
+         unsigned int beRongAnhTo;
+         unsigned int beCaoAnhTo;
+         unsigned char *anhToMau = toMauAnh( anhBoLocTrungBinhDoc, beRongTep0, beCaoTep0, &beRongAnhTo, &beCaoAnhTo );
+         luuAnhPNG( "AnhToMau.png", anhToMau, beRongAnhTo, beCaoAnhTo );
 
          // ---- tìm mặt nạ: bộ l ̣c trung bình trước, sau tìm chổ trong ảnh ≥ giới hạn
  /*        printf( "Đang tìm mặt nạ ảnh\n" );
@@ -2805,7 +2808,9 @@ typedef struct {
 /* Tìm Đường */
 //unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
 //unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
-void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet );
+void chepAnhVaoAnh( unsigned char *anhToMau, unsigned int beRongAnhTo, unsigned int beCaoAnhTo,
+                   unsigned char *anhXuat, unsigned int beRongXuat, unsigned int beCaoXuat, unsigned short dichX, unsigned short dichY );
+void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet, short dichX, short dichY );
 void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, ChuNhat khung, unsigned short cachNet );
 void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet );
 
@@ -2829,11 +2834,19 @@ unsigned char danhSachMau[] = {
    0x00, 0xff, 0x00, 0xff,  // 9
 };
 
-
-unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
+#define kLE_TRAI__ANH_TO 100  // điểm ảnh
+unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned int *beRongXuat, unsigned int *beCaoXuat ) {
    
+   *beRongXuat = beRong + (kLE_TRAI__ANH_TO << 1);
+   *beCaoXuat = beCao;
+   
+   // ---- ảnh để tô màu
    unsigned char *anhToMau = malloc( beRong * beCao << 2 );
+
    float *anhGiupToMau = malloc( beRong * beCao * sizeof(float) );
+   
+   // ---- ảnh xuất, có khung, số nét, và tọa độ
+   unsigned char *anhXuat = malloc( *beRongXuat * *beCaoXuat << 2 );
 
    if( anhToMau && anhGiupToMau ) {
       // ---- xóa ảnh tô
@@ -2852,6 +2865,16 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
          anhGiupToMau[diaChiAnh] = -1.0f;
          diaChiAnh++;
       }
+      
+      // ---- xóa ảnh xuất
+      diaChiAnh = 0;
+      while( diaChiAnh < *beRongXuat * *beCaoXuat << 2 ) {
+         anhXuat[diaChiAnh] = 255;
+         anhXuat[diaChiAnh+1] = 255;
+         anhXuat[diaChiAnh+2] = 255;
+         anhXuat[diaChiAnh+3] = 255;
+         diaChiAnh += 4;
+      }
 
       Net *mangNetCao;
       Net *mangNetThap;
@@ -2864,45 +2887,90 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       veNetCap( anhGiupToMau, beRong, beCao, mangNetCao, soLuongNetCao );
       veNetCap( anhGiupToMau, beRong, beCao, mangNetThap, soLuongNetThap );
       
-      // ---- vẽ nét trắng
+      // ---- tô màu
       toGiuaNet( anh, anhToMau, anhGiupToMau, beRong, beCao );
-      veNetVaSo( anhToMau, beRong, beCao, mangNetCao, soLuongNetCao );
-      veNetVaSo( anhToMau, beRong, beCao, mangNetThap, soLuongNetThap );
+      
+      // ---- chép vào ảnh xuất
+      chepAnhVaoAnh( anhToMau, beRong, beCao, anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO, 0 );
+      
+      // ---- vẽ nét trắng và số
+      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetCao, soLuongNetCao, kLE_TRAI__ANH_TO, 0 );
+      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetThap, soLuongNetThap, kLE_TRAI__ANH_TO, 0 );
       
       // ----- vẽ khung quanh ảnh
       ChuNhat khung;
-      khung.trai = 0;
-      khung.phai = 2048;
+      khung.trai = kLE_TRAI__ANH_TO;
+      khung.phai = 2048 + kLE_TRAI__ANH_TO;
       khung.duoi = 200;
       khung.tren = 1140;
 
-      veKhungVaToaDo( anhToMau, beRong, beCao, khung, 200 );
+      veKhungVaToaDo( anhXuat, *beRongXuat, *beCaoXuat, khung, 200 );
+      
+      free( anhGiupToMau );
+      free( anhToMau );
    }
    else {
       printf( "TôMàuẢnh: vấn đề tạo ảnh tô màu\n" );
    }
    
-   return anhToMau;
+   return anhXuat;
 }
 
+void chepAnhVaoAnh( unsigned char *anhToMau, unsigned int beRongAnhTo, unsigned int beCaoAnhTo,
+                   unsigned char *anhXuat, unsigned int beRongXuat, unsigned int beCaoXuat, unsigned short dichX, unsigned short dichY ) {
+   
+   unsigned int soCotCuoi = beRongAnhTo;
+   if( beRongAnhTo + dichX > beRongXuat )
+      soCotCuoi = beRongXuat - dichX;
+   
+   unsigned int soHangCuoi = beCaoAnhTo;
+   if( beCaoAnhTo + dichY > beCaoXuat )
+      soHangCuoi = beRongXuat - dichY;
+   
+   unsigned int diaChiAnhToMau = 0;
 
-void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet ) {
+   unsigned short soHangAnhTo = 0;
+   while( soHangAnhTo < soHangCuoi ) {
+      unsigned int diaChiAnhXuat = ((dichY + soHangAnhTo)*beRongXuat + dichX) << 2;
+      unsigned soCotAnhTo = 0;
+      while( soCotAnhTo < soCotCuoi ) {
+         
+         anhXuat[diaChiAnhXuat] = anhToMau[diaChiAnhToMau];
+         anhXuat[diaChiAnhXuat+1] = anhToMau[diaChiAnhToMau+1];
+         anhXuat[diaChiAnhXuat+2] = anhToMau[diaChiAnhToMau+2];
+         anhXuat[diaChiAnhXuat+3] = anhToMau[diaChiAnhToMau+3];
+         diaChiAnhToMau += 4;
+         diaChiAnhXuat += 4;
+         soCotAnhTo++;
+      }
 
+      soHangAnhTo++;
+   }
+}
+
+void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet, short dichX, short dichY ) {
+   
    unsigned char chiSoNet = 0;
    while( chiSoNet < soLuongNet ) {
-
+      
       if( mangNet[chiSoNet].docTrungBinh < 5.0f ) {
          // ---- vẽ nét
          unsigned char chiSoDiem = 1;
          unsigned short soLuongDiem = mangNet[chiSoNet].soLuongDiem;
          while( chiSoDiem < soLuongDiem ) {
-            veDuong( anhToMau, beRong, beCao, mangNet[chiSoNet].mangDiem[chiSoDiem], mangNet[chiSoNet].mangDiem[chiSoDiem-1], 0xffffffff );
+            Diem diem0 = mangNet[chiSoNet].mangDiem[chiSoDiem];
+            Diem diem1 = mangNet[chiSoNet].mangDiem[chiSoDiem-1];
+            diem0.x += dichX;
+            diem0.y += dichY;
+            diem1.x += dichX;
+            diem1.y += dichY;
+            veDuong( anhToMau, beRong, beCao, diem0, diem1, 0xffffffff );
             chiSoDiem++;
          }
          
          // --- vẽ số cấp của nét
-         short x = mangNet[chiSoNet].mangDiem[0].x - 24;
-         short y = mangNet[chiSoNet].mangDiem[0].y + 20;
+         short x = mangNet[chiSoNet].mangDiem[0].x - 24 + dichX;
+         short y = mangNet[chiSoNet].mangDiem[0].y + 20 + dichY;
          veSoCai( xauChoSo( mangNet[chiSoNet].cap ), x, y, anhToMau, beRong, beCao );
       }
       
@@ -2911,7 +2979,8 @@ void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short b
 }
 
 void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, ChuNhat khung, unsigned short cachNet ) {
-
+   
+   // ---- vẽ khung
    Diem netKhung0;
    Diem netKhung1;
    netKhung0.x = khung.trai;
@@ -2921,6 +2990,15 @@ void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned sh
    veDuong( anhToMau, beRong, beCao, netKhung0, netKhung1, 0xff );
    netKhung0.y = khung.tren;
    netKhung1.y = khung.tren;
+   veDuong( anhToMau, beRong, beCao, netKhung0, netKhung1, 0xff );
+   
+   netKhung0.x = khung.trai;
+   netKhung0.y = khung.duoi;
+   netKhung1.x = khung.trai;
+   netKhung1.y = khung.tren;
+   veDuong( anhToMau, beRong, beCao, netKhung0, netKhung1, 0xff );
+   netKhung0.x = khung.phai;
+   netKhung1.x = khung.phai;
    veDuong( anhToMau, beRong, beCao, netKhung0, netKhung1, 0xff );
    
    // ---- vẽ nét tọa độ ở trên
@@ -2981,7 +3059,7 @@ void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned sh
    while( diemNgang0.y < khung.tren ) {
       diemNgang0.x = khung.trai + cachNet - 20;
       diemNgang1.x = khung.trai + cachNet + 20;
-
+      
       diemDoc0.x = khung.trai + cachNet;
       diemDoc1.x = khung.trai + cachNet;
       diemDoc0.y = diemNgang0.y - 20;
@@ -2999,6 +3077,7 @@ void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned sh
       diemNgang1.y += cachNet;
    }
 }
+
 
 
 void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet ) {

@@ -1,6 +1,6 @@
-//  suKhacBietXam.c   // sựKhácBiệtXám.c
-//  Phiên bản 1.3
-//  Phát hành 2561/01/14
+//  suKhacBietXamCat.c   // sựKhácBiệtXámCắt.c
+//  Phiên bản 1.35
+//  Phát hành 2561/01/17
 //  Cho ảnh PNG
 //  Khởi đầu 2560/03/13
 //
@@ -22,6 +22,8 @@
 typedef struct {
    int x;             // vị trí điểm
    int y;
+   float x_DH;       // sau vị trí đơn vị hóa (bề rộng ảnh)
+   float y_DH;       // sau vị trí đơn vị hóa (bề cao ảnh)
    char doc;         // dốc hướng X mặt độ sáng tại điểm trong ảnh
    float goc;
    float huongX;       // hướng đến điểm này từ điểm trước
@@ -61,20 +63,6 @@ unsigned char *docPNG_BGRO( char *duongTapTin, unsigned int *beRong, unsigned in
 
 /* tính sự khác biệt giữa hai hình */
 unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *duongTapTin1, unsigned int beRong, unsigned int beCao, unsigned char daoNghich );
-
-/* bộ lọc Blackman */
-unsigned char *boLocAnh_Blackman( unsigned char *anh, unsigned int beRong, unsigned int beCao );
-
-/* Tính hệ số bộ lọc Blackman */
-float *tinhCacHeSoBoLocBlackman( unsigned short beRong);
-
-/* bộ lọc Sobel */
-unsigned char *boLocAnh_Sobel_ngang( unsigned char *anh, unsigned int beRong, unsigned int beCao );
-unsigned char *boLocAnh_Sobel_doc( unsigned char *anh, unsigned int beRong, unsigned int beCao );
-
-/* Bộ Lộc Gauss */
-float *tinhHeSoChoBoLocGauss( float beRongHam, float doChinhXac, unsigned short *beDaiMang );
-unsigned char *boLocAnh_Gauss( unsigned char *anh, unsigned int beRong, unsigned int beCao, float chenhLech );
 
 /* Trung Bình */
 unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short beRongBoLoc );
@@ -328,112 +316,7 @@ unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *du
    return anhSuKhacBiet;
 }
 
-#pragma mark ---- Bộ Lọc Blackman
-#define kA_0 0.42f
-#define kA_1 0.50f
-#define kA_2 0.08f
 
-#define kTI_SO_VONG_TRON 3.1415926f
-
-// ---- LƯU Ý: Hai hệ số đầu và cuối = 0 và không lơu hay tính nó
-float *tinhCacHeSoBoLocBlackman( unsigned short beRongBoLoc ) {
-
-   // ---- mẫu số của phân số trong cộng thức, chỉ cần tính một lần
-   float mauSo = (float)(beRongBoLoc - 1);
-   
-   // ---- tạo mảng hệ số Blackman
-   unsigned short beRongBoLoc_khongBangKhong = beRongBoLoc - 2;
-   float *mangHeSoBlackman = malloc( sizeof(float)*(beRongBoLoc_khongBangKhong) );
-   
-   // ---- tính các hệ số KHÔNG = 0
-   float doLon = 0.0f;
-   if( mangHeSoBlackman != NULL ) {
-      unsigned short chiSo = 0;
-      while( chiSo < beRongBoLoc_khongBangKhong ) {
-         mangHeSoBlackman[chiSo] = kA_0 - kA_1*cosf(2.0f*kTI_SO_VONG_TRON*(chiSo+1)/mauSo) + kA_2*cosf(4.0f*kTI_SO_VONG_TRON*(chiSo+1)/mauSo);
-         doLon += mangHeSoBlackman[chiSo];
-         chiSo++;
-      }
-      
-      // ---- đơn vị hóa
-      chiSo = 0;
-
-      while( chiSo < beRongBoLoc_khongBangKhong ) {
-         mangHeSoBlackman[chiSo] /= doLon;
-//         printf( "%d %5.3f\n", chiSo, mangHeSoBlackman[chiSo] );
-         chiSo++;
-      }
-   }
-   else {
-      printf( "tinhCacTroSoBoLocBlackman: vấn đề tạo mảng hệ số Blackman\n" );
-      exit(0);
-   }
-
-   return mangHeSoBlackman;
-}
-
-unsigned char *boLocAnh_Blackman( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
-   
-   // ---- tạo bộ lọc
-   float *boLocAnh_Blackman = tinhCacHeSoBoLocBlackman( kSO_LUONG__HE_SO_BO_LOC_BLACKMAN );
-   unsigned short beRongBoLoc_khongBangKhong = kSO_LUONG__HE_SO_BO_LOC_BLACKMAN - 2;
-   
-   unsigned char *anhBoLoc = malloc( beRong*beCao << 2 );
-
-   if( anhBoLoc ) {
-      unsigned int soHang = beRongBoLoc_khongBangKhong >> 1;
-      unsigned int soHangCuoi = beCao - (beRongBoLoc_khongBangKhong >> 1);
-      int cachMotHang = beRong << 2;   // số lượng byte giữa một đến hàng tiếp, cùng cột
-      
-      while( soHang < soHangCuoi ) {
-         
-         unsigned short soCot = 0;
-         unsigned short soCotCuoi = beRong;
-
-         while( soCot < soCotCuoi ) {
-   
-            // ---- áp dụng bộ lọc
-            int diaChiAnhBoLoc = (beRong*soHang + soCot) << 2;
-            int diaChiAnh = diaChiAnhBoLoc - cachMotHang*(beRongBoLoc_khongBangKhong >> 1);
-
-            // ---- xóa điểm ảnh
-            anhBoLoc[diaChiAnhBoLoc] = 0;
-            anhBoLoc[diaChiAnhBoLoc+1] = 0;
-            anhBoLoc[diaChiAnhBoLoc+2] = 0;
-            anhBoLoc[diaChiAnhBoLoc+3] = 0xff;   // độ đục
-
-            unsigned short giaTriLocXanh = 0;
-            unsigned short giaTriLocLuc = 0;
-            unsigned short giaTriLocDo = 0;
-            
-            unsigned short chiSoHeSo = 0;
-            
-            while( chiSoHeSo < beRongBoLoc_khongBangKhong ) {
-//               printf( "%d/%d, %d/%d %d: diaChiAnh %d - diaChiAnhBoLoc %d = %d  %5.3f\n", soHang, beCao, soCot, beRong, chiSoHeSo, diaChiAnh, diaChiAnhBoLoc, diaChiAnh - diaChiAnhBoLoc, boLocAnh_Blackman[chiSoHeSo] );
-               giaTriLocXanh += anh[diaChiAnh]*boLocAnh_Blackman[chiSoHeSo];
-               giaTriLocLuc += anh[diaChiAnh+1]*boLocAnh_Blackman[chiSoHeSo];
-               giaTriLocDo += anh[diaChiAnh+2]*boLocAnh_Blackman[chiSoHeSo];
-               diaChiAnh += cachMotHang;
-  
-               chiSoHeSo++;
-            }
-            anhBoLoc[diaChiAnhBoLoc] = giaTriLocXanh;
-            anhBoLoc[diaChiAnhBoLoc+1] = giaTriLocLuc;
-            anhBoLoc[diaChiAnhBoLoc+2] = giaTriLocDo;
-            anhBoLoc[diaChiAnhBoLoc+3] = 0xff;
-
- //           printf( "%d %d %d\n", soCot, soHang, anhBoLoc[diaChiAnhBoLoc] );
-            // ---- điểm ảnh tiếp
-            soCot++;
-         };
-         soHang++;
-      }
-   }
-   else {
-      printf( "Sự khác: boLocAnh_Blackman: Vấn đệ tạo đệm cho sự khác biệt\n" );
-   }
-   return anhBoLoc;
-}
 
 #pragma mark ---- Chỉnh Chênh Lệch
 void chinhChenhLech( unsigned char *anh, unsigned int beRong, unsigned int beCao, float triSoChenLech ) {
@@ -477,7 +360,7 @@ void chinhChenhLech( unsigned char *anh, unsigned int beRong, unsigned int beCao
    }
 }
 
-#pragma mark ----
+#pragma mark ---- Chỉnh Độ Sáng
 void chinhDoSang( unsigned char *anh, unsigned int beRong, unsigned int beCao, char triSoTang ) {
    
    unsigned int diaChiAnh = 0;
@@ -611,328 +494,6 @@ void toDiemAnhThapTrongO( unsigned int diemAnhThap, unsigned char *anh, unsigned
    }
 }
 
-#pragma mark ---- BỘ LỘC SOBEL
-/*
-    -1 0 1
-    -2 0 2
-    -1 0 1
- */
-unsigned char *boLocAnh_Sobel_ngang( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
-   
-   unsigned char *anhBoLoc = calloc( beRong*beCao, 4 );
-   
-   if( anhBoLoc ) {
-      
-      unsigned int soHang = 1;
-      unsigned int soHangCuoi = beCao - 1;
-      
-      while( soHang < soHangCuoi ) {
-         unsigned int diaChiAnhHangDuoi = ((soHang-1)*beRong + 1) << 2;
-         unsigned int diaChiAnhHangGiua = diaChiAnhHangDuoi + (beRong << 2);
-         unsigned int diaChiAnhHangTren = diaChiAnhHangGiua + (beRong << 2);
-         
-         unsigned short soCot = 1;
-         unsigned short soCotCuoi = beRong - 1;
-
-         while( soCot < soCotCuoi ) {
-            
-            // ---- áp dụng bộ lọc
-            short giaTri = anh[diaChiAnhHangDuoi + 4] - anh[diaChiAnhHangDuoi - 4];
-            giaTri += (anh[diaChiAnhHangGiua + 4] - anh[diaChiAnhHangDuoi - 4]) << 1;
-            giaTri += anh[diaChiAnhHangTren + 4] - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-
-            // ----
-            giaTri = anh[diaChiAnhHangDuoi + 4] - anh[diaChiAnhHangDuoi - 4];
-            giaTri += (anh[diaChiAnhHangGiua + 4] - anh[diaChiAnhHangDuoi - 4]) << 1;
-            giaTri += anh[diaChiAnhHangTren + 4] - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-            
-            // ----
-            giaTri = anh[diaChiAnhHangDuoi + 4] - anh[diaChiAnhHangDuoi - 4];
-            giaTri += (anh[diaChiAnhHangGiua + 4] - anh[diaChiAnhHangDuoi - 4]) << 1;
-            giaTri += anh[diaChiAnhHangTren + 4] - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-
-            // ----
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-
-            soCot++;
-         };
-         soHang++;
-
-      }
-               
-   }
-   else {
-      printf( "Sự khác: boLocAnh_Blackman: Vấn đệ tạo đệm cho sự khác biệt\n" );
-   }
-   return anhBoLoc;
-}
-
-/*
-  1  2  1
-  0  0  0
- -1 -2 -1
- */
-unsigned char *boLocAnh_Sobel_doc( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
-   
-   unsigned char *anhBoLoc = calloc( beRong*beCao, 4 );
-   
-   if( anhBoLoc ) {
-      
-      unsigned int soHang = 1;
-      unsigned int soHangCuoi = beCao - 1;
-      
-      while( soHang < soHangCuoi ) {
-         unsigned int diaChiAnhHangDuoi = ((soHang-1)*beRong + 1) << 2;
-         unsigned int diaChiAnhHangGiua = diaChiAnhHangDuoi + (beRong << 2);
-         unsigned int diaChiAnhHangTren = diaChiAnhHangGiua + (beRong << 2);
-         
-         unsigned short soCot = 1;
-         unsigned short soCotCuoi = beRong - 1;
-         
-         while( soCot < soCotCuoi ) {
-            
-            // ---- áp dụng bộ lọc
-            short giaTri = anh[diaChiAnhHangDuoi - 4]  - (anh[diaChiAnhHangDuoi + 4] << 1) - anh[diaChiAnhHangDuoi - 4];
-            giaTri += anh[diaChiAnhHangTren - 4] + (anh[diaChiAnhHangTren] << 1) - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-            
-            // ----
-            giaTri = anh[diaChiAnhHangDuoi - 4] - (anh[diaChiAnhHangDuoi + 4] << 1) - anh[diaChiAnhHangDuoi - 4];
-            giaTri += anh[diaChiAnhHangTren - 4] + (anh[diaChiAnhHangTren] << 1) - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-            
-            // ----
-            giaTri = anh[diaChiAnhHangDuoi - 4] - (anh[diaChiAnhHangDuoi + 4] << 1) - anh[diaChiAnhHangDuoi - 4];
-            giaTri += anh[diaChiAnhHangTren - 4] + (anh[diaChiAnhHangTren] << 1) - anh[diaChiAnhHangTren - 4];
-            giaTri >>= 3;
-            anhBoLoc[diaChiAnhHangGiua] = giaTri;
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-            
-            // ----
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-            anhBoLoc[diaChiAnhHangGiua] = 0xff;
-            
-            diaChiAnhHangDuoi++;
-            diaChiAnhHangGiua++;
-            diaChiAnhHangTren++;
-            
-            soCot++;
-         };
-         soHang++;
-         
-      }
-   }
-   else {
-      printf( "Sự khác: boLocAnh_Blackman: Vấn đệ tạo đệm cho sự khác biệt\n" );
-   }
-   return anhBoLoc;
-}
-
-#pragma mark ---- Bộ Lọc Gauss
-//#define kHAI_PI 6.28f
-#define kDO_CHINH_XAC 0.01f
-
-// f(x) = (1/d) * expf( -c^2/b^2 )
-// đcx = (1/d) * expf( -c^2/b^2 )
-//   đcx*d = expf( -c^2/b^2 )
-//   ln|đcx*d| = -c^2/b^2
-//  sqrt( -ln|đcx*d| ) = c/b
-//   c = sqrt(ln|đcx*d|)*b
-// d = (2πb^2)
-
-
-#include <math.h>
-float *tinhHeSoChoBoLocGauss( float beRongHam, float doChinhXac, unsigned short *beDaiMang ) {
-   
-   // ---- tính bề rộng bên
-   float beRongHamBinh = beRongHam * beRongHam;
-   
-   // ---- tính số lượng hệ số
-   short soLuongHeSo = ceilf( sqrt( -log( kDO_CHINH_XAC ) )*beRongHam );//doChinhXac/
-   float canSoBeRongHam = sqrtf( beRongHam );
-   // nhân 2 vì có hai bền
-   float toaDo = -(soLuongHeSo);
-   
-   soLuongHeSo <<= 1; // nhân 2 (hai bên)
-   soLuongHeSo++;     // thêm một cái cho số không
-   
-   // ---- tạo mảng hệ số
-   float *mangHeSo = malloc( soLuongHeSo );
-   if( mangHeSo ) {
-      
-      // ---- tính hệ số
-      //          -
-      //        /   \
-      //    --/       \--
-      // +--------+--------+
-      float tongCong = 0.0f;
-      unsigned short chiSoHeSo = 0;
-      while( chiSoHeSo < soLuongHeSo ) {
-         mangHeSo[chiSoHeSo] = expf( -0.5f*toaDo*toaDo/beRongHamBinh );
- //        printf( "%d  %5.3f\n", chiSoHeSo, mangHeSo[chiSoHeSo] );
-         toaDo += 1.0f;
-         tongCong += mangHeSo[chiSoHeSo];
-         chiSoHeSo++;
-      }
-   
-     // ---- đơn vị hóa
-      chiSoHeSo = 0;
-      while( chiSoHeSo < soLuongHeSo ) {
-         mangHeSo[chiSoHeSo] /= tongCong;
- //        printf( "%d  %5.3f\n", chiSoHeSo, mangHeSo[chiSoHeSo] );
-         chiSoHeSo++;
-      }
-      *beDaiMang = soLuongHeSo;
-      
-      return mangHeSo;
-   }
-   else {
-      printf( "tinhHeSoChoBoLocGauss: có vấn đề dành trí nhớ cho hệ số bộ lọc Gauss\n" );
-      return NULL;
-   }
-}
-
-unsigned char *boLocAnh_Gauss( unsigned char *anh, unsigned int beRong, unsigned int beCao, float chenhLech ) {
-   
-   // ---- tạo bộ lọc
-   unsigned short soLuongHeSo = 0;
-   float *boLocGauss = tinhHeSoChoBoLocGauss( chenhLech, kDO_CHINH_XAC, &soLuongHeSo );
-   unsigned short nuaBeRongBoLoc = soLuongHeSo >> 1;
-
-   unsigned char *anhBoLoc0 = malloc( beRong*beCao << 2 );
-   unsigned char *anhBoLoc1 = malloc( beRong*beCao << 2 );
-   
-   unsigned int chiSo = 0;
-   unsigned int chiSoCuoi = beRong*beCao << 2;
-   while( chiSo < chiSoCuoi ) {
-      anhBoLoc0[chiSo] = 0xff;
-      anhBoLoc1[chiSo] = 0xff;
-      chiSo++;
-   }
-   
-   if( anhBoLoc0 && anhBoLoc1 ) {
-      unsigned int soHang = 0;
-      unsigned int soHangCuoi = beCao;
-      unsigned short soCotCuoi = beRong - nuaBeRongBoLoc;
-      int cachMotHang = beRong << 2;   // số lượng byte giữa một đến hàng tiếp, cùng cột
-
-      // ==== hượng ngang
-      while( soHang < soHangCuoi ) {
-         
-         unsigned short soCot = nuaBeRongBoLoc;
-
-         
-         while( soCot < soCotCuoi ) {
-
-            // ---- áp dụng bộ lọc
-            int diaChiAnh = (beRong*soHang + soCot) << 2;
-
-            unsigned short giaTriLocXanh = 0;
-            unsigned short giaTriLocLuc = 0;
-            unsigned short giaTriLocDo = 0;
-            
-            int viTriTuongDoi = -(nuaBeRongBoLoc << 2);
-            unsigned short chiSoHeSo = 0;
-            
-            while( chiSoHeSo < soLuongHeSo ) {
-//               printf( " viTri %d  %d\n", viTriTuongDoi, diaChiAnh );
-               giaTriLocXanh += anh[diaChiAnh - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               giaTriLocLuc += anh[diaChiAnh+1 - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               giaTriLocDo += anh[diaChiAnh+2 - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               viTriTuongDoi += 4;
-               chiSoHeSo++;
-            }
-
-            anhBoLoc0[diaChiAnh] = giaTriLocXanh;
-            anhBoLoc0[diaChiAnh+1] = giaTriLocLuc;
-            anhBoLoc0[diaChiAnh+2] = giaTriLocDo;
-            anhBoLoc0[diaChiAnh+3] = 0xff;
-
-            // ---- điểm ảnh tiếp
-            soCot++;
-         };
-         soHang++;
-      }
-      
-      // ==== hượng dọc
-      soHang = nuaBeRongBoLoc;
-      soHangCuoi = beCao - nuaBeRongBoLoc;
-      soCotCuoi = beRong;
-      
-      while( soHang < soHangCuoi ) {
-         
-         unsigned short soCot = 0;
-
-         while( soCot < soCotCuoi ) {
-//            printf( "d %d %d\n", soCot, soHang );
-            // ---- áp dụng bộ lọc
-            unsigned int diaChiAnh = (beRong*soHang + soCot) << 2;
-            
-            unsigned short giaTriLocXanh = 0;
-            unsigned short giaTriLocLuc = 0;
-            unsigned short giaTriLocDo = 0;
-            
-            short viTriTuongDoi = -(nuaBeRongBoLoc*beRong << 2);
-            unsigned short chiSoHeSo = 0;
-            
-            while( chiSoHeSo < soLuongHeSo ) {
-               //               printf( "%d/%d, %d/%d %d: diaChiAnh %d - diaChiAnhBoLoc %d = %d  %5.3f\n", soHang, beCao, soCot, beRong, chiSoHeSo, diaChiAnh, diaChiAnhBoLoc, diaChiAnh - diaChiAnhBoLoc, boLocAnh_Blackman[chiSoHeSo] );
-               giaTriLocXanh += anhBoLoc0[diaChiAnh - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               giaTriLocLuc += anhBoLoc0[diaChiAnh+1 - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               giaTriLocDo += anhBoLoc0[diaChiAnh+2 - viTriTuongDoi]*boLocGauss[chiSoHeSo];
-               viTriTuongDoi += beRong << 2;
-               chiSoHeSo++;
-            }
-            
-            anhBoLoc1[diaChiAnh] = giaTriLocXanh;
-            anhBoLoc1[diaChiAnh+1] = giaTriLocLuc;
-            anhBoLoc1[diaChiAnh+2] = giaTriLocDo;
-            anhBoLoc1[diaChiAnh+3] = 0xff;
-
-            // ---- điểm ảnh tiếp
-            soCot++;
-         };
-         soHang++;
-      }
-
-   }
-   else {
-      printf( "Sự khác: boLocAnh_Blackman: Vấn đệ tạo đệm cho sự khác biệt\n" );
-   }
-   return anhBoLoc1;
-}
 
 #pragma mark ---- Bộ Lọc Trung Bình
 unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short beRongBoLoc ) {
@@ -1515,13 +1076,16 @@ unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigne
 
 //      printf( "  docX_truoc %d (%d) - (%d)   docX %d (%d) - (%d)\n", docX_truoc, diaChiAnh, diaChiAnh-(cach << 3), docX, diaChiAnh+(cach << 2), diaChiAnh-(cach << 2) );
       if( (docX_truoc >= 0) && (docX < 0) ) {
-
-         mangDiemThichThu[chiSoMangToaDo].x = soCot;
-         mangDiemThichThu[chiSoMangToaDo].y = soHang;
-         mangDiemThichThu[chiSoMangToaDo].doSang = anh[diaChiAnh];
-         mangDiemThichThu[chiSoMangToaDo].xuLyRoi = kSAI;
-         if( phanTichDiemCaoNgang( anh, beRong, beCao, &(mangDiemThichThu[chiSoMangToaDo]) ) ) {
-            printf( "-CAO- %d (%d; %d)  doSang %d\n", chiSoMangToaDo, mangDiemThichThu[chiSoMangToaDo].x, mangDiemThichThu[chiSoMangToaDo].y, mangDiemThichThu[chiSoMangToaDo].doSang );
+         Diem *diemMoi = &(mangDiemThichThu[chiSoMangToaDo]);
+         diemMoi->x = soCot;
+         diemMoi->y = soHang;
+         diemMoi->doSang = anh[diaChiAnh];
+         diemMoi->xuLyRoi = kSAI;
+         diemMoi->x_DH = (float)soCot/(float)beRong;
+         diemMoi->y_DH = (float)soHang/(float)beCao;
+         if( phanTichDiemCaoNgang( anh, beRong, beCao, diemMoi ) ) {
+            printf( "-CAO- %d (%d; %d) / (%5.3f; %5.3f) doSang %d  \n", chiSoMangToaDo, diemMoi->x, diemMoi->y,
+                   diemMoi->x_DH, diemMoi->y_DH, diemMoi->doSang );
             chiSoMangToaDo++;
          }
       }
@@ -1642,13 +1206,16 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
 
       //      printf( "  docX_truoc %d (%d) - (%d)   docX %d (%d) - (%d)\n", docX_truoc, diaChiAnh, diaChiAnh-(cach << 3), docX, diaChiAnh+(cach << 2), diaChiAnh-(cach << 2) );
       if( (docX_truoc <= 0) && (docX > 0) ) {
-         
-         mangDiemThichThu[chiSoMangToaDo].x = soCot;
-         mangDiemThichThu[chiSoMangToaDo].y = soHang;
-         mangDiemThichThu[chiSoMangToaDo].doSang = anh[diaChiAnh];
-         mangDiemThichThu[chiSoMangToaDo].xuLyRoi = kSAI;
-         if( phanTichDiemThapNgang( anh, beRong, beCao, &(mangDiemThichThu[chiSoMangToaDo]) ) ) {
-            printf( "-THAP- %d (%d; %d)  doSang %d\n", chiSoMangToaDo, mangDiemThichThu[chiSoMangToaDo].x, mangDiemThichThu[chiSoMangToaDo].y, mangDiemThichThu[chiSoMangToaDo].doSang );
+         Diem *diemMoi = &(mangDiemThichThu[chiSoMangToaDo]);
+         diemMoi->x = soCot;
+         diemMoi->y = soHang;
+         diemMoi->doSang = anh[diaChiAnh];
+         diemMoi->xuLyRoi = kSAI;
+         diemMoi->x_DH = (float)soCot/(float)beRong;
+         diemMoi->y_DH = (float)soHang/(float)beCao;
+         if( phanTichDiemThapNgang( anh, beRong, beCao, diemMoi ) ) {
+            printf( "-THAP- %d (%d; %d) / (%5.3f; %5.3f) doSang %d  \n", chiSoMangToaDo, diemMoi->x, diemMoi->y,
+                   diemMoi->x_DH, diemMoi->y_DH, diemMoi->doSang );
             chiSoMangToaDo++;
          }
       }

@@ -1,6 +1,6 @@
 //  suKhacBietXamCat.c   // sựKhácBiệtXámCắt.c
-//  Phiên bản 1.35
-//  Phát hành 2561/01/17
+//  Phiên bản 1.35a
+//  Phát hành 2561/01/18
 //  Cho ảnh PNG
 //  Khởi đầu 2560/03/13
 //
@@ -963,11 +963,11 @@ void gioiHan( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsig
 ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHan, unsigned short nuaBeRongBoLoc ) {
 
    // ---- quét dòng và tìm hàng các hàng có giá trị hơn giới hạn
-   unsigned int soHang = nuaBeRongBoLoc;
+   unsigned int soHang = 0;
    int batDauMatNa = -1;
    int ketThucMatNa = -1;
    
-   while( soHang < beCao - nuaBeRongBoLoc) {
+   while( soHang < beCao) {
       
       unsigned int diaChiCot = soHang*beRong << 2;
       unsigned int soCot = nuaBeRongBoLoc;
@@ -996,8 +996,8 @@ ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int be
    }
    
    ChuNhat matNa;
-   matNa.trai = nuaBeRongBoLoc;
-   matNa.phai = beRong - nuaBeRongBoLoc;
+   matNa.trai = 0;
+   matNa.phai = beRong;
    matNa.duoi = batDauMatNa;
    matNa.tren = ketThucMatNa;
    

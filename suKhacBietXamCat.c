@@ -56,13 +56,11 @@ typedef struct {
    short tamChuNhatY;       // tâm chữ nhật Y
 } Net;
 
-#define kSO_LUONG__HE_SO_BO_LOC_BLACKMAN 21  // <--- QUAN TRỌNG: PHẢI DÙNG SỐ LẺ NHE!
-
-/* đọc tệp PNG BGRO */
-unsigned char *docPNG_BGRO( char *duongTapTin, unsigned int *beRong, unsigned int *beCao, unsigned char *canLatMau );
-
 /* tính sự khác biệt giữa hai hình */
 unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *duongTapTin1, unsigned int beRong, unsigned int beCao, unsigned char daoNghich );
+
+/* ghép tên ảnh */
+void ghepTenAnh( char *tenAnh, char *tenGhep0, char *tenGhep1 );
 
 /* Trung Bình */
 unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short beRongBoLoc );
@@ -100,6 +98,9 @@ void chepKyTu( unsigned int *kyTu, unsigned short x, unsigned short y, unsigned 
 /* Tô Màu */
 unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned int *beRongAnhTo, unsigned int *beCaoAnhTo );
 
+/* đọc tệp PNG BGRO */
+unsigned char *docPNG_BGRO( char *duongTapTin, unsigned int *beRong, unsigned int *beCao, unsigned char *canLatMau );
+
 /* Lưu ảnh PNG */
 void luuAnhPNG( char *tenTep, unsigned char *suKhacBiet, unsigned int beRong, unsigned int beCao );
 
@@ -126,13 +127,13 @@ int main( int argc, char **argv ) {
          // ---- tính sự khác giữa hai ảnh
          unsigned char *anhSuKhacBiet = tinhSuKhacBietXam( duLieuTep0, duLieuTep1, beRongTep0, beCaoTep0, kDUNG );
 
-
          // ---- tìm mặt nạ: bộ l ̣c trung bình trước, sau tìm chổ trong ảnh ≥ giới hạn
          printf( "Đang tìm mặt nạ ảnh\n" );
          unsigned char *anhMatNa0 = boLocTrungBinh( duLieuTep0, beRongTep0, beCaoTep0, 20 );
-         unsigned char *anhMatNa1 = boLocTrungBinh( duLieuTep1, beRongTep1, beCaoTep1, 20 );
-         ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, 120, 75 >> 1 );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
-         ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, 120, 75 >> 1 );
+         
+         unsigned char *anhMatNa1 = boLocTrungBinh( duLieuTep1, beRongTep1, beCaoTep1, 21 );
+         ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, 100, 75 >> 1 );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
+         ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, 100, 75 >> 1 );
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[1], matNa0.trai, matNa0.phai, matNa0.duoi, matNa0.tren );
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[2], matNa1.trai, matNa1.phai, matNa1.duoi, matNa1.tren );
 
@@ -151,7 +152,7 @@ int main( int argc, char **argv ) {
          if( matNa0.duoi < matNa1.duoi )
             matNaGiao.duoi = matNa1.duoi;
          else
-            matNaGiao.duoi = matNa0.phai;
+            matNaGiao.duoi = matNa0.duoi;
          
          if( matNa0.tren < matNa1.tren )
             matNaGiao.tren = matNa0.tren;
@@ -165,44 +166,24 @@ int main( int argc, char **argv ) {
          unsigned char *anhCat = catAnh( anhSuKhacBiet, beRongTep0, beCaoTep0, &matNaGiao );
          unsigned short beRongAnhCat = matNaGiao.phai - matNaGiao.trai;
          unsigned short beCaoAnhCat = matNaGiao.tren - matNaGiao.duoi;
-
-         
+  
          // ---- bộ lọc ảnh
-         printf( "Đang bộ lọc ảnh cắt\n" );
+         printf( "Đang bộ lọc ảnh cắt: trungBinh\n" );
          unsigned char *anhBoLocTrungBinh = boLocTrungBinh( anhCat, beRongAnhCat, beCaoAnhCat, 75 );
+         printf( "Đang bộ lọc ảnh cắt: trungBinhDoc\n" );
          unsigned char *anhBoLocTrungBinhDoc = boLocTrungBinhDoc( anhBoLocTrungBinh, beRongAnhCat, beCaoAnhCat, 70  );
          luuAnhPNG( "AnhCatBoLoc.png", anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat );
+      
          // ---- tô màu ảnh
          printf( "Tô màu ảnh cắt\n" );
          unsigned int beRongAnhTo;
          unsigned int beCaoAnhTo;
          unsigned char *anhToMau = toMauAnh( anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat, &beRongAnhTo, &beCaoAnhTo );
 
-         // ---- lưu sự khác
-         char tenAnhSuKhacBiet[255];
-         char *dauTen = tenAnhSuKhacBiet;
-         unsigned char chiSo = 0;
-         while( argv[1][chiSo] != 0x00 ) {
-            *dauTen = argv[1][chiSo];
-            dauTen++;
-            chiSo++;
-         }
-         // ---- bỏ đuôi
-         dauTen -= 4;
-         *dauTen = '_';
-         dauTen++;
-         *dauTen = '_';
-         dauTen++;
-         chiSo = 0;
-         while( argv[2][chiSo] != 0x00 ) {
-            *dauTen = argv[2][chiSo];
-            dauTen++;
-            chiSo++;
-         }
-         *dauTen = 0x00;
-
-         printf( "Tên két qủa: %s\n", tenAnhSuKhacBiet );
-         luuAnhPNG( tenAnhSuKhacBiet, anhToMau, beRongAnhTo, beCaoAnhTo );
+         // ---- ghép tên ảnh
+         char tenAnhToMau[254];
+         ghepTenAnh( tenAnhToMau, argv[1], argv[2] );
+         luuAnhPNG( tenAnhToMau, anhToMau, beRongAnhTo, beCaoAnhTo );
 
          free( anhSuKhacBiet );
          free( anhBoLocTrungBinh );
@@ -221,6 +202,32 @@ int main( int argc, char **argv ) {
    return 1;
 }
 
+
+void ghepTenAnh( char *tenAnh, char *tenGhep0, char *tenGhep1 ) {
+
+
+   char *dauTen = tenAnh;
+   unsigned char chiSo = 0;
+   while( tenGhep0[chiSo] != 0x00 ) {
+      *dauTen = tenGhep0[chiSo];
+      dauTen++;
+      chiSo++;
+   }
+   // ---- bỏ đuôi
+   dauTen -= 4;
+   *dauTen = '_';
+   dauTen++;
+   *dauTen = '_';
+   dauTen++;
+   chiSo = 0;
+   while( tenGhep1[chiSo] != 0x00 ) {
+      *dauTen = tenGhep1[chiSo];
+      dauTen++;
+      chiSo++;
+   }
+   *dauTen = 0x00;
+
+}
 
 // ---- nó đảo nghịch kết qủa cho dễ thấy hơn
 unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *duongTapTin1, unsigned int beRong, unsigned int beCao, unsigned char daoNghich ) {
@@ -496,16 +503,29 @@ void toDiemAnhThapTrongO( unsigned int diemAnhThap, unsigned char *anh, unsigned
 
 
 #pragma mark ---- Bộ Lọc Trung Bình
+// Nếu dùng bộ lọc phần tử chẳng, nó bộ lọc  * * * * o * * *  <---- thiếu một phân tử bên phải
 unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short beRongBoLoc ) {
-   
-   unsigned int diaChiCuoi = beRong*beCao << 2;  // <-------- cho KIỂM TRA SEGMENT FALT 11
+
+   // ---- không cho bộ lọc qúa to
+   if( (beRongBoLoc > beRong) || (beRongBoLoc> beCao) ) {
+      if( beRong > beCao )
+         beRongBoLoc = beRong;
+      else
+         beRongBoLoc = beCao;
+   }
+
+   // ---- bề rộng bộ lọc phải chẳng
+   if( (beRongBoLoc & 0x01) == 0 )
+      beRongBoLoc++;
+
+//   printf( "beRongBoLoc %d\n", beRongBoLoc );
    
    // ---- mẫu số để "đơn vị hóa" giá trị từ bộ lọc (0 đến 255)
    unsigned char *anhBoLoc = malloc( beRong*beCao << 2 );
    unsigned char *anhBoLoc1 = malloc( beRong*beCao << 2 );
    unsigned short phanNuaBoLoc = beRongBoLoc >> 1;
    
-   //
+   // ---- xóa ảnh bộ lọc
    unsigned int chiSo = 0;
    unsigned int chiSoCuoi = beRong*beCao << 2;
    while( chiSo < chiSoCuoi ) {
@@ -543,9 +563,9 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             // ---- địa chỉ trong ảnh để bắt đầu bộ lọc
             int diaChiDeBoLoc = diaChiAnh - (soCot << 2);
             
-            //            printf( "%d giaTriAnhCanhTrai %d  soLuongDiemAnhNgoai %d  diaChiAnh %d\n",  soCot, giaTriAnhCanhTrai, soLuongDiemAnhNgoai, diaChiAnh  );
+ //           printf( "N soHang  %d/%d  soCot %d giaTriAnhCanhTrai %d  soLuongDiemAnhNgoai %d  diaChiAnh %d\n", soHang, soHangCuoi, soCot, giaTriAnhCanhTrai, soLuongDiemAnhNgoai, diaChiAnh  );
             while( chiSoCotBoLoc < beRongBoLoc ) {
-               
+
                giaTriLocDo += anh[diaChiDeBoLoc];
                giaTriLocLuc += anh[diaChiDeBoLoc+1];
                giaTriLocXanh += anh[diaChiDeBoLoc+2];
@@ -569,6 +589,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
          diaChiAnh = (beRong*soHang + soCot) << 2;
          
          while( soCot < soCotCuoi ) {
+
  //           printf( " ngang: giua: soCot %d phanNuaBoLoc %d  beCao %d\n", soCot, phanNuaBoLoc, beCao );
             unsigned int giaTriLocXanh = 0;
             unsigned int giaTriLocLuc = 0;
@@ -582,7 +603,6 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             int diaChiDeBoLoc = diaChiAnh + (cotTuongDoi << 2);
             
             while( chiSoCotBoLoc < beRongBoLoc ) {
-               
                giaTriLocDo += anh[diaChiDeBoLoc];
                giaTriLocLuc += anh[diaChiDeBoLoc+1];
                giaTriLocXanh += anh[diaChiDeBoLoc+2];
@@ -612,6 +632,8 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
 
          unsigned char giaTriAnhCanhPhai = anh[diaChiAnh + ((beRong - 1) << 2)];
          while( soCot < beRong ) {
+//            printf( " DC_anh %d\n", diaChiAnh );
+
 //            printf( " ngang: cuoi: soCot %d/%d  soHang %d/%d  diaChiCuoi %d\n", soCot, beRong, soHang, beCao, diaChiCuoi );
             unsigned short soLuongDiemAnhNgoai = phanNuaBoLoc - (beRong - soCot - 1);
             unsigned int giaTriLocXanh = soLuongDiemAnhNgoai*giaTriAnhCanhPhai;
@@ -626,7 +648,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             int diaChiDeBoLoc = diaChiAnh + (cotTuongDoi << 2);
             
             while( chiSoCotBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
-               
+//               printf( " DC_boLoc %d\n", diaChiDeBoLoc );
                giaTriLocDo += anh[diaChiDeBoLoc];
                giaTriLocLuc += anh[diaChiDeBoLoc+1];
                giaTriLocXanh += anh[diaChiDeBoLoc+2];
@@ -654,17 +676,18 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
       soHang = 0;
       
       while( soHang < phanNuaBoLoc ) {
-         printf( " doc dau: soHang %d/%d\n", soHang, beCao );
+ //        printf( " doc dau: soHang %d/%d\n", soHang, beCao );
 
          unsigned short soCot = 0;
          int diaChiAnh = beRong*soHang << 2;
          while( soCot < beRong ) {
+
             unsigned char giaTriAnhCanhDuoi = anhBoLoc[soCot << 2];
             unsigned short soLuongDiemAnhNgoai = (phanNuaBoLoc - soHang);
             unsigned int giaTriLocXanh = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
             unsigned int giaTriLocLuc = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
             unsigned int giaTriLocDo = soLuongDiemAnhNgoai*giaTriAnhCanhDuoi;
-            //           printf( " %d diaChiAnh %d  soLuongDiemAnhNgoai %d (%d)\n", soCot, diaChiAnh, soLuongDiemAnhNgoai,  beRongBoLoc - soLuongDiemAnhNgoai );
+//            printf( "D soHang  %d/%d  soCot %d giaTriAnhCanhDuoi %d  soLuongDiemAnhNgoai %d  diaChiAnh %d\n", soHang, soHangCuoi, soCot, giaTriAnhCanhDuoi, soLuongDiemAnhNgoai, diaChiAnh  );
             // ---- chỉ số trong bộ lọc (phạm vi trong 0 tới beRongBoLoc)
             short chiSoHangBoLoc = 0;
             
@@ -672,6 +695,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             int diaChiDeBoLoc = soCot << 2;
             
             while( chiSoHangBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
+
                giaTriLocDo += anhBoLoc[diaChiDeBoLoc];
                giaTriLocLuc += anhBoLoc[diaChiDeBoLoc+1];
                giaTriLocXanh += anhBoLoc[diaChiDeBoLoc+2];
@@ -695,13 +719,13 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
       soHangCuoi = beCao - phanNuaBoLoc;
       
       while( soHang < soHangCuoi ) {
-        printf( " doc giua: soHang %d/%d\n", soHang, beCao );
+  //      printf( " doc giua: soHang %d/%d\n", soHang, beCao );
          
          unsigned short soCot = 0;
          int diaChiAnh = (beRong*soHang + soCot) << 2;
          
          while( soCot < beRong ) {
-            
+//            printf( " DC_anh %d\n", diaChiAnh );
             // ---- áp dụng bộ lọc
             unsigned int giaTriLocXanh = 0;
             unsigned int giaTriLocLuc = 0;
@@ -715,6 +739,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             int diaChiDeBoLoc = diaChiAnh + (hangTuongDoi*beRong << 2);
             
             while( chiSoHangBoLoc < beRongBoLoc ) {
+//               printf( " DC_boLoc %d\n", diaChiDeBoLoc );
                giaTriLocDo += anhBoLoc[diaChiDeBoLoc];
                giaTriLocLuc += anhBoLoc[diaChiDeBoLoc+1];
                giaTriLocXanh += anhBoLoc[diaChiDeBoLoc+2];
@@ -740,6 +765,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
          unsigned short soCot = 0;
          int diaChiAnh = beRong*soHang << 2;
          while( soCot < beRong ) {
+
 //         printf( " doc cuoi: soCot %d/%d soHang %d/%d  diaChiCuoi %d\n", soCot, beRong, soHang, beCao, diaChiCuoi );
             unsigned char giaTriAnhCanhDuoi = anhBoLoc[diaChiHangCuoi];
             unsigned short soLuongDiemAnhNgoai = phanNuaBoLoc - (beCao - soHang - 1);
@@ -754,6 +780,7 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
             int diaChiDeBoLoc = diaChiAnh + (hangTuongDoi*beRong << 2);
             
             while( chiSoHangBoLoc < beRongBoLoc - soLuongDiemAnhNgoai ) {
+
                giaTriLocDo += anhBoLoc[diaChiDeBoLoc];
                giaTriLocLuc += anhBoLoc[diaChiDeBoLoc+1];
                giaTriLocXanh += anhBoLoc[diaChiDeBoLoc+2];
@@ -785,7 +812,19 @@ unsigned char *boLocTrungBinh( unsigned char *anh, unsigned int beRong, unsigned
 }
 
 unsigned char *boLocTrungBinhDoc( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short beRongBoLoc ) {
+
+   // ---- không cho bộ lọc qúa to
+   if( (beRongBoLoc > beRong) || (beRongBoLoc> beCao) ) {
+      if( beRong > beCao )
+         beRongBoLoc = beRong;
+      else
+         beRongBoLoc = beCao;
+   }
    
+   // ---- bề rộng bộ lọc phải chẳng
+   if( (beRongBoLoc & 0x01) == 0 )
+      beRongBoLoc++;
+
    // ---- mẫu số để "đơn vị hóa" giá trị từ bộ lọc (0 đến 255)
    unsigned char *anhBoLoc = malloc( beRong*beCao << 2 );
    unsigned short phanNuaBoLoc = beRongBoLoc >> 1;
@@ -1058,7 +1097,7 @@ void toMauCacDiem( unsigned char *anh, unsigned int beRong, unsigned int beCao, 
 // +------+------o------+------+
 //              điểm
 //
-//    dốc trước        dốc
+//    dốc trước       dốc sau
 // |<----------->|<----------->|
 unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet ) {
    
@@ -1081,6 +1120,7 @@ unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigne
          diemMoi->y = soHang;
          diemMoi->doSang = anh[diaChiAnh];
          diemMoi->xuLyRoi = kSAI;
+         // ---- đơn vi hóa vị trí tương đội với khổ ảnh
          diemMoi->x_DH = (float)soCot/(float)beRong;
          diemMoi->y_DH = (float)soHang/(float)beCao;
          if( phanTichDiemCaoNgang( anh, beRong, beCao, diemMoi ) ) {
@@ -1211,6 +1251,7 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
          diemMoi->y = soHang;
          diemMoi->doSang = anh[diaChiAnh];
          diemMoi->xuLyRoi = kSAI;
+         // ---- đơn vi hóa vị trí tương đội với khổ ảnh
          diemMoi->x_DH = (float)soCot/(float)beRong;
          diemMoi->y_DH = (float)soHang/(float)beCao;
          if( phanTichDiemThapNgang( anh, beRong, beCao, diemMoi ) ) {
@@ -2450,8 +2491,6 @@ typedef struct {
 } GiaoDiemNet;
 
 /* Tìm Đường */
-//unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
-//unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned char cach, Net **mangNet );
 void chepAnhVaoAnh( unsigned char *anhToMau, unsigned int beRongAnhTo, unsigned int beCaoAnhTo,
                    unsigned char *anhXuat, unsigned int beRongXuat, unsigned int beCaoXuat, unsigned short dichX, unsigned short dichY );
 void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet, short dichX, short dichY );

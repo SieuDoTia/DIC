@@ -84,7 +84,7 @@ void chinhDoSang( unsigned char *anh, unsigned int beRong, unsigned int beCao, c
 void vuongHoa_giaTriTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao );
 
 /* Tìm Mặt Nạ */
-ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHan, unsigned short beRongBoLoc );
+ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang );
 
 unsigned char *catAnh( unsigned char *anh, unsigned int beRong, unsigned beCao, ChuNhat *matNa );
 
@@ -129,11 +129,11 @@ int main( int argc, char **argv ) {
 
          // ---- tìm mặt nạ: bộ l ̣c trung bình trước, sau tìm chổ trong ảnh ≥ giới hạn
          printf( "Đang tìm mặt nạ ảnh\n" );
-         unsigned char *anhMatNa0 = boLocTrungBinh( duLieuTep0, beRongTep0, beCaoTep0, 20 );
+         unsigned char *anhMatNa0 = boLocTrungBinh( duLieuTep0, beRongTep0, beCaoTep0, 21 );
          
          unsigned char *anhMatNa1 = boLocTrungBinh( duLieuTep1, beRongTep1, beCaoTep1, 21 );
-         ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, 100, 75 >> 1 );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
-         ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, 100, 75 >> 1 );
+         ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, 100 );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
+         ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, 100 );
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[1], matNa0.trai, matNa0.phai, matNa0.duoi, matNa0.tren );
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[2], matNa1.trai, matNa1.phai, matNa1.duoi, matNa1.tren );
 
@@ -999,7 +999,7 @@ void gioiHan( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsig
 }
 
 #pragma mark ---- Tìm Mặt Na
-ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHan, unsigned short nuaBeRongBoLoc ) {
+ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang ) {
 
    // ---- quét dòng và tìm hàng các hàng có giá trị hơn giới hạn
    unsigned int soHang = 0;
@@ -1009,10 +1009,10 @@ ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int be
    while( soHang < beCao) {
       
       unsigned int diaChiCot = soHang*beRong << 2;
-      unsigned int soCot = nuaBeRongBoLoc;
+      unsigned int soCot = 0;
       unsigned char hetHonGioiHan = kDUNG;  // BOOL, hết hơn giới hạn
-      while( soCot < beRong - nuaBeRongBoLoc ) {
-         if( anhMatNa[diaChiCot] < gioiHan ) {
+      while( soCot < beRong ) {
+         if( anhMatNa[diaChiCot] < gioiHanDoSang ) {
             hetHonGioiHan = kSAI;
             soCot = beRong;  // bỏ cuộc và đi hàng tiếp
          }
@@ -1296,7 +1296,7 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
 
          // ---- cần giữ điểm để xem đường có kết nối với các điểm thích thú
          mangDiemCuoiDung[soDiem] = diTheoDoiDuongVaChoDiemCuoi( anh, beRong, beCao, &(mangDiemThichThu[soDiem]), kSAI, &(mangGiuNet[chiSoMangNet]), kTAM_XA );
-         
+   //      printf( "%d %5.3f\n", soDiem, mangGiuNet[chiSoMangNet].docTrungBinh  );
          // ---- dốc cao quá nghĩa nó đã leo qua một núi hay thủng lủng
          if( mangGiuNet[chiSoMangNet].docTrungBinh >= 3.6f ) {
             mangDiemThichThu[soDiem].xuLyRoi = kDUNG;
@@ -2496,6 +2496,7 @@ void chepAnhVaoAnh( unsigned char *anhToMau, unsigned int beRongAnhTo, unsigned 
 void veNetVaSo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet, short dichX, short dichY );
 void veKhungVaToaDo( unsigned char *anhToMau, unsigned short beRong, unsigned short beCao, ChuNhat khung, unsigned short cachNet );
 void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net *mangNet, unsigned char soLuongNet );
+void veThanhMau( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short x, unsigned short y );
 
 unsigned int doXamChoSoThuc( float so );
 unsigned int mauChoSoThuc( float so );
@@ -2509,18 +2510,23 @@ unsigned char danhSachMau[] = {
    0xff, 0x00, 0x00, 0xff,  // 2
    0xff, 0x00, 0x7f, 0xff,  // 3
    0x7f, 0x00, 0xff, 0xff,  // 4
-   0x00, 0xff, 0xff, 0xff,  // 5
+   0x00, 0x00, 0xff, 0xff,  // 5
    0x00, 0x7f, 0xff, 0xff,  // 6
    0x00, 0xff, 0xff, 0xff,  // 7
    0x00, 0xff, 0x7f, 0xff,  // 8
    0x00, 0xff, 0x00, 0xff,  // 9
+   0x00, 0xff, 0xff, 0xff,  // 9
 };
 
-#define kLE_TRAI__ANH_TO 100  // điểm ảnh
+#define kLE_TRAI__ANH_TO 200  // điểm ảnh
+#define kLE_PHAI__ANH_TO 100  // điểm ảnh
+#define kLE_DUOI__ANH_TO 100  // điểm ảnh
+#define kLE_TREN__ANH_TO 100  // điểm ảnh
+
 unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned int *beRongXuat, unsigned int *beCaoXuat ) {
    
-   *beRongXuat = beRong + (kLE_TRAI__ANH_TO << 1);
-   *beCaoXuat = beCao + (kLE_TRAI__ANH_TO << 1);
+   *beRongXuat = beRong + kLE_TRAI__ANH_TO + kLE_PHAI__ANH_TO;
+   *beCaoXuat = beCao + kLE_DUOI__ANH_TO + kLE_TREN__ANH_TO;
    
    printf( "toMauAnh: anh  %d x %d   anhTo %d x %d\n", beRong, beCao, *beRongXuat, *beCaoXuat );
    
@@ -2577,19 +2583,22 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       
       // ---- chép vào ảnh xuất
       printf( "toMauAnh: chepAnh\n" );
-      chepAnhVaoAnh( anhToMau, beRong, beCao, anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO, kLE_TRAI__ANH_TO );
+      chepAnhVaoAnh( anhToMau, beRong, beCao, anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO, kLE_DUOI__ANH_TO );
    
       // ---- vẽ nét trắng và số
       printf( "toMauAnh: veNet\n" );
-      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetCao, soLuongNetCao, kLE_TRAI__ANH_TO, kLE_TRAI__ANH_TO );
-      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetThap, soLuongNetThap, kLE_TRAI__ANH_TO, kLE_TRAI__ANH_TO );
+      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetCao, soLuongNetCao, kLE_TRAI__ANH_TO, kLE_DUOI__ANH_TO );
+      veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetThap, soLuongNetThap, kLE_TRAI__ANH_TO, kLE_DUOI__ANH_TO );
       
-      // ----- vẽ khung quanh ảnh
+      // ---- vẽ thanh màu
+      veThanhMau( anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO - 100, kLE_DUOI__ANH_TO + 100 );
+
+      // ---- vẽ khung quanh ảnh
       ChuNhat khung;
       khung.trai = kLE_TRAI__ANH_TO;
-      khung.phai = beRong - 1 + kLE_TRAI__ANH_TO;
-      khung.duoi = kLE_TRAI__ANH_TO;
-      khung.tren = beCao - 1 + kLE_TRAI__ANH_TO;
+      khung.phai = *beRongXuat - 1 - kLE_PHAI__ANH_TO;
+      khung.duoi = kLE_DUOI__ANH_TO;
+      khung.tren = *beCaoXuat - 1 - kLE_TREN__ANH_TO;
 
       printf( "toMauAnh: veKhungVaToaDo\n" );
       veKhungVaToaDo( anhXuat, *beRongXuat, *beCaoXuat, khung, 200 );
@@ -2788,6 +2797,33 @@ void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net
       
       chiSoNet++;
    }
+}
+
+
+#define kTHANH_MAU__BE_RONG    80
+#define kTHANH_MAU__BE_CAO    200
+
+void veThanhMau( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short x, unsigned short y ) {
+   
+   if( (x + kTHANH_MAU__BE_RONG < beRong) && (y + kTHANH_MAU__BE_CAO < beCao) ) {
+      
+      unsigned short soHang = 0;
+      
+      float toaDoX = 0.0f;
+      float buocMau = 1.0f/kTHANH_MAU__BE_CAO;
+      
+      while( soHang < kTHANH_MAU__BE_CAO ) {
+         
+         unsigned short soCot = 0;
+         while( soCot < kTHANH_MAU__BE_RONG ) {
+            
+            soCot++;
+         }
+         toaDoX += buocMau;
+         soHang++;
+      }
+   }
+   
 }
 
 

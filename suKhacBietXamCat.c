@@ -134,6 +134,12 @@ int main( int argc, char **argv ) {
          unsigned char *anhMatNa1 = boLocTrungBinh( duLieuTep1, beRongTep1, beCaoTep1, 21 );
          ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, 100 );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
          ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, 100 );
+         // ---- ảnh hơi mờ ở cạnh dưới và trên từ bộ lọc, cắt bớt một chút
+         matNa0.tren -= 10;
+         matNa0.duoi += 10;
+         matNa1.tren -= 10;
+         matNa1.duoi += 10;
+         
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[1], matNa0.trai, matNa0.phai, matNa0.duoi, matNa0.tren );
          printf( "Mặt nạ ảnh %s: %d %d %d %d\n", argv[2], matNa1.trai, matNa1.phai, matNa1.duoi, matNa1.tren );
 
@@ -1143,7 +1149,7 @@ unsigned char tìmDiemCaoNgang( unsigned char *anh, unsigned int beRong, unsigne
    Net *mangGiuNet = *mangNet;
 
    // ---- để tính cấp nét
-   float cap = 1.0f;      // cấp nét
+   float cap = 0.5f;      // cấp nét
    unsigned char tangCap = kDUNG;   // cho biết tăng hay giảm cấp
    unsigned char khongGapDoiVien = kSAI;    // cho biết nét không gặp ranh đối viên
    unsigned char soLanKhongGapDoiVien = 0;   // số lần không gặp ranh đối viên
@@ -1244,7 +1250,7 @@ unsigned char tìmDiemThapNgang( unsigned char *anh, unsigned int beRong, unsign
       char docX_truoc = anh[diaChiAnh] - anh[diaChiAnh-(cach << 3)];
       char docX = anh[diaChiAnh+(cach << 2)] - anh[diaChiAnh-(cach << 2)];
 
-      //      printf( "  docX_truoc %d (%d) - (%d)   docX %d (%d) - (%d)\n", docX_truoc, diaChiAnh, diaChiAnh-(cach << 3), docX, diaChiAnh+(cach << 2), diaChiAnh-(cach << 2) );
+      printf( "  docX_truoc %d (%d) - (%d)   docX %d (%d) - (%d)\n", docX_truoc, anh[diaChiAnh], anh[diaChiAnh-(cach << 3)], docX, anh[diaChiAnh+(cach << 2)], anh[diaChiAnh-(cach << 2)] );
       if( (docX_truoc <= 0) && (docX > 0) ) {
          Diem *diemMoi = &(mangDiemThichThu[chiSoMangToaDo]);
          diemMoi->x = soCot;
@@ -2515,7 +2521,7 @@ unsigned char danhSachMau[] = {
    0x00, 0xff, 0xff, 0xff,  // 7
    0x00, 0xff, 0x7f, 0xff,  // 8
    0x00, 0xff, 0x00, 0xff,  // 9
-   0x00, 0xff, 0xff, 0xff,  // 9
+   0xff, 0xff, 0xff, 0xff,  // 9
 };
 
 #define kLE_TRAI__ANH_TO 200  // điểm ảnh
@@ -2571,6 +2577,22 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       
       unsigned char soLuongNetCao = tìmDiemCaoNgang( anh, beRong, beCao, 10, &mangNetCao );
       unsigned char soLuongNetThap = tìmDiemThapNgang( anh, beRong, beCao, 10, &mangNetThap );
+      
+      // ---- kiếm số bắt đầu
+      if( mangNetCao[0].mangDiem[0].x < mangNetThap[0].mangDiem[0].x ) {
+         unsigned char soNet = 0;
+         while( soNet < soLuongNetThap ) {
+            mangNetThap[soNet].cap += 0.5f;
+            soNet++;
+         }
+      }
+      else {
+         unsigned char soNet = 0;
+         while( soNet < soLuongNetCao ) {
+            mangNetCao[soNet].cap += 0.5f;
+            soNet++;
+         }
+      }
 
       printf( "toMauAnh: soLuongNetCao %d  soLuongNetThap %d\n", soLuongNetCao, soLuongNetThap );
       // ---- vẽ nét cập trong giúp tô màu
@@ -2591,7 +2613,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
       veNetVaSo( anhXuat, *beRongXuat, *beCaoXuat, mangNetThap, soLuongNetThap, kLE_TRAI__ANH_TO, kLE_DUOI__ANH_TO );
       
       // ---- vẽ thanh màu
-      veThanhMau( anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO - 100, kLE_DUOI__ANH_TO + 100 );
+      veThanhMau( anhXuat, *beRongXuat, *beCaoXuat, kLE_TRAI__ANH_TO - 100, kLE_DUOI__ANH_TO + 200 );
 
       // ---- vẽ khung quanh ảnh
       ChuNhat khung;
@@ -2800,30 +2822,99 @@ void veNetCap( float *anhFloat, unsigned short beRong, unsigned short beCao, Net
 }
 
 
-#define kTHANH_MAU__BE_RONG    80
-#define kTHANH_MAU__BE_CAO    200
+#define kTHANH_MAU__BE_RONG    50
+#define kTHANH_MAU__BE_CAO    500
 
 void veThanhMau( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsigned short x, unsigned short y ) {
    
    if( (x + kTHANH_MAU__BE_RONG < beRong) && (y + kTHANH_MAU__BE_CAO < beCao) ) {
       
+      // ---- thanh màu
       unsigned short soHang = 0;
-      
-      float toaDoX = 0.0f;
-      float buocMau = 1.0f/kTHANH_MAU__BE_CAO;
+      float toaDoMau = 0.0f;
+      float buocMau = 10.0f/kTHANH_MAU__BE_CAO;
       
       while( soHang < kTHANH_MAU__BE_CAO ) {
-         
+         unsigned int mau = mauChoSoThuc( toaDoMau );
+         unsigned int diaChiAnh = ((soHang + y)*beRong + x) << 2;
          unsigned short soCot = 0;
          while( soCot < kTHANH_MAU__BE_RONG ) {
-            
+            anh[diaChiAnh] = mau >> 24;
+            anh[diaChiAnh+1] = mau >> 16;
+            anh[diaChiAnh+2] = mau >> 8;
             soCot++;
+            diaChiAnh += 4;
          }
-         toaDoX += buocMau;
+         toaDoMau += buocMau;
          soHang++;
       }
    }
    
+   // ---- số
+   unsigned short so_viTriX = x - 70;
+   unsigned short so_viTriY = y - 8;
+   
+   veSoCai( xauChoSo( 0.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 1.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 2.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 3.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 4.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 5.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 6.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 7.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 8.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 9.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+   so_viTriX -= 16;
+   so_viTriY += 50;
+   veSoCai( xauChoSo( 10.0f ), so_viTriX, so_viTriY, anh, beRong, beCao );
+
+   // ---- khung
+   Diem dauNet;
+   Diem cuoiNet;
+   // ---- trái
+   dauNet.x = x;
+   dauNet.y = y;
+   cuoiNet.x = x;
+   cuoiNet.y = y + kTHANH_MAU__BE_CAO;
+   veDuong( anh, beRong, beCao, dauNet, cuoiNet, 0xff );
+   // ---- phải
+   dauNet.x += kTHANH_MAU__BE_RONG;
+   cuoiNet.x += kTHANH_MAU__BE_RONG;
+   veDuong( anh, beRong, beCao, dauNet, cuoiNet, 0xff );
+   // ---- dưới
+   dauNet.x = x;
+   cuoiNet.y = y;
+   veDuong( anh, beRong, beCao, dauNet, cuoiNet, 0xff );
+   // ---- trên
+   dauNet.y += kTHANH_MAU__BE_CAO;
+   cuoiNet.y += kTHANH_MAU__BE_CAO;
+   veDuong( anh, beRong, beCao, dauNet, cuoiNet, 0xff );
+   
+   
+   // ---- nét
+
+   dauNet.x = x - 15;
+   dauNet.y = y;
+   cuoiNet.x = x;
+   cuoiNet.y = y;
+   
+   unsigned char soNet = 0;
+   while( soNet < 11 ) {
+      veDuong( anh, beRong, beCao, dauNet, cuoiNet, 0xff );
+      dauNet.y += 50;
+      cuoiNet.y += 50;
+      soNet++;
+   }
+
 }
 
 
@@ -3064,26 +3155,26 @@ unsigned int doXamChoSoThuc( float so ) {
 }
 
 unsigned int mauChoSoThuc( float so ) {
-   
-   
+
    unsigned char chiSoMau = floorf( so );
    float phanSo = (so - chiSoMau);
    chiSoMau <<= 2;
-   
-   //   printf( "chiSoMau %d\n", chiSoMau );
+
    unsigned char mauDo = danhSachMau[chiSoMau]*(1.0f - phanSo) + danhSachMau[chiSoMau+4]*phanSo;
    unsigned char mauLuc = danhSachMau[chiSoMau+1]*(1.0f - phanSo) + danhSachMau[chiSoMau+5]*phanSo;
    unsigned char mauXanh = danhSachMau[chiSoMau+2]*(1.0f - phanSo) + danhSachMau[chiSoMau+6]*phanSo;
    unsigned char mauDuc = danhSachMau[chiSoMau+3]*(1.0f - phanSo) + danhSachMau[chiSoMau+7]*phanSo;
    
    unsigned int mauSuyNoi = mauDo << 24 | mauLuc << 16 | mauXanh << 8 | mauDuc;
-   //    printf( "chiSoMau %d  mau %x  soPhan %5.3f\n", chiSoMau, mauSuyNoi, phanSo );
+
    return mauSuyNoi;
 }
 
 char *xauChoSo( float cap ) {
-   
-   if( cap == 0.5f )
+
+   if( cap == 0.0f )
+      return "0,0";
+   else if( cap == 0.5f )
       return "0,5";
    else if( cap == 1.0f )
       return "1,0";
@@ -3118,9 +3209,11 @@ char *xauChoSo( float cap ) {
    else if( cap == 8.5f )
       return "8,5";
    else if( cap == 9.0f )
-      return "1,0";
+      return "9,0";
    else if( cap == 9.5f )
-      return "1,5";
+      return "9,5";
+   else if( cap == 10.0f )
+      return "10,0";
    else
       return "10+";
 }

@@ -1,6 +1,6 @@
 //  suKhacBietXamCat.c   // sựKhácBiệtXámCắt.c
-//  Phiên bản 1.35a
-//  Phát hành 2561/01/18
+//  Phiên bản 1.4a
+//  Phát hành 2561/01/29
 //  Cho ảnh PNG
 //  Khởi đầu 2560/03/13
 //
@@ -1034,11 +1034,12 @@ ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int be
    int ketThucMatNa = -1;
    
    while( soHang < beCao ) {
-      
+ //     printf( "soHang %d\n", soHang );
       unsigned int diaChiCot = (soHang*beRong + cachBoQua) << 2;
       unsigned int soCot = cachBoQua;
       unsigned char hetHonGioiHan = kDUNG;  // BOOL, hết hơn giới hạn
       while( soCot < beRong - cachBoQua ) {
+ //        printf( "%d doSang %d\n", soCot, soHang );
          if( anhMatNa[diaChiCot] < gioiHanDoSang ) {
             hetHonGioiHan = kSAI;
             soCot = beRong;  // <---- BỎ CUỘC VÀ đi hàng tiếp
@@ -1348,7 +1349,7 @@ unsigned short timCacNet( unsigned char *anh, unsigned int beRong, unsigned int 
          else
             diemCuoi = diTheoDoiDuongVaChoDiemCuoi( anh, beRong, beCao, &(mangDiemThichThu[soDiem]), kLOAI_THAP, &(mangNet[soLuongNet]), kTAM_XA );
          
- //        printf( " %d timDiemCao: diemCuoi (%d; %d)\n", soDiem, diemCuoi.x, diemCuoi.y );
+         printf( " %d timDiemCao: diemCuoi (%d; %d)\n", soDiem, diemCuoi.x, diemCuoi.y );
          
          // ---- xem có điểm thích thú để gần điểm cuối
          //      chỉ cần xem điểm thích thú sau, những điểm trước đã được xử lý rồi
@@ -1438,10 +1439,26 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
       diemTiepTheo.huongX = diem0.huongX;
       diemTiepTheo.huongY = diem0.huongY;
 
-//      printf( " diTheoDoiDuong: truoc  diem0 (%d; %d)   diemTiep: (%d ; %d)  huong %5.3f %5.3f  buoc %5.3f\n", diem0.x, diem0.y, diemTiepTheo.x, diemTiepTheo.y, diem0.huongX, diem0.huongY, buoc );
+      printf( " diTheoDoiDuong: truoc  diem0 (%d; %d)   diemTiep: (%d ; %d)  huong %5.3f %5.3f  buoc %5.3f\n", diem0.x, diem0.y, diemTiepTheo.x, diemTiepTheo.y, diem0.huongX, diem0.huongY, buoc );
 
       // ---- nên kiểm tra GIỚI HẠN TRÁi PHẢI
-      
+      if( diemTiepTheo.x > gioiHanPhai ) {
+         float soPhan = (float)(gioiHanPhai - diem0.x)/(float)(diemTiepTheo.x - diem0.x);
+         diemTiepTheo.x = diem0.x + (diemTiepTheo.x - diem0.x)*soPhan;
+         diemTiepTheo.y = diem0.y + (diemTiepTheo.y - diem0.y)*soPhan;
+         // ---- đến cạnh và tìm điểm tốt nhất ở đó
+         diemTiepTheo.huongX = 1.0f;
+         diemTiepTheo.huongY = 0.0f;
+      }
+      else if( diemTiepTheo.x < gioiHanTrai ) {
+         float soPhan = (float)(diem0.x - gioiHanTrai)/(float)(diem0.x - diemTiepTheo.x);
+         diemTiepTheo.x = diem0.x + (diemTiepTheo.x - diem0.x)*soPhan;
+         diemTiepTheo.y = diem0.y + (diemTiepTheo.y - diem0.y)*soPhan;
+         // ---- đến cạnh và tìm điểm tốt nhất ở đó
+         diemTiepTheo.huongX = -1.0f;
+         diemTiepTheo.huongY = 0.0f;
+      }
+   
       // ---- đừng cho điểm ra ngoài phạm vi, dùng hướng của điểm để sửa lại vị trí năm trên ranh giới hạn
       if( diemTiepTheo.y > gioiHanCao ) {
          float soPhan = (float)(gioiHanCao - diem0.y)/(float)(diemTiepTheo.y - diem0.y);

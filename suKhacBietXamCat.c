@@ -1,6 +1,6 @@
 //  suKhacBietXamCat.c   // sựKhácBiệtXámCắt.c
-//  Phiên bản 1.4a
-//  Phát hành 2561/01/29
+//  Phiên bản 1.41
+//  Phát hành 2561/01/31
 //  Cho ảnh PNG
 //  Khởi đầu 2560/03/13
 //
@@ -112,6 +112,7 @@ unsigned char *toMauDoSangAnh( unsigned char *anh, unsigned int beRong, unsigned
 
 void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1, unsigned int mau );
 void veDuongCap( float *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1, float cap );
+void veChuNhatTrongAnh( unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh, ChuNhat chuNhat, unsigned int mau );
 void veSoCai( char *xauSo, unsigned short x, unsigned short y, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
 void chepKyTu( unsigned int *kyTu, unsigned short x, unsigned short y, unsigned char beRong, unsigned char beCao, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh );
 
@@ -1445,7 +1446,6 @@ unsigned short tìmCacDiemThichThu( unsigned char *anh, unsigned int beRong, uns
    
 //   printf( "doSangDau %d doSangHienTai %d\n", doSangDau, doSangHienTai );
    while( (soCot < beRong) && (doSangDau == doSangHienTai) ) {
-      printf( "%d   \n", doSangDau);
       doSangHienTai = anh[diaChiAnh ];
       diaChiAnh += 4;
       soCot++;
@@ -1456,7 +1456,6 @@ unsigned short tìmCacDiemThichThu( unsigned char *anh, unsigned int beRong, uns
       cheDoSang = kSAI;
    else
       cheDoSang = kDUNG;
-   printf( "CheDoSang %d \n", cheDoSang );
    
    unsigned short soLuongDiem = 0;
    
@@ -1657,7 +1656,7 @@ unsigned short timCacNet( unsigned char *anh, unsigned int beRong, unsigned int 
          
          // ---- hết gắp nét không gặp ranh đối viên, trừ số lần gắp không đối viên để có đúng cấp
          if( !khongGapDoiVien && soLanKhongGapDoiVien ) {
-            mangNet[soLuongNet].cap = cap - (soLanKhongGapDoiVien + 1)*0.5f;  // cần trừ một thêm một lần vì đã cộng 1 với cấp từ lặp vòng trước
+            mangNet[soLuongNet].cap = cap - (soLanKhongGapDoiVien)*0.5f;  // cần trừ một thêm một lần vì đã cộng 1 với cấp từ lặp vòng trước
             tangCap = kSAI;
          }
          else
@@ -1713,8 +1712,6 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
       diemTiepTheo.y = diem0.y + diem0.huongY*buoc;
       diemTiepTheo.huongX = diem0.huongX;
       diemTiepTheo.huongY = diem0.huongY;
-
-//      printf( " diTheoDoiDuong: truoc  diem0 (%d; %d)   diemTiep: (%d ; %d)  huong %5.3f %5.3f  buoc %5.3f\n", diem0.x, diem0.y, diemTiepTheo.x, diemTiepTheo.y, diem0.huongX, diem0.huongY, buoc );
 
       // ---- nên kiểm tra GIỚI HẠN TRÁi PHẢI
       if( diemTiepTheo.x > gioiHanPhai ) {
@@ -1773,6 +1770,8 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
          docNet -= docGiuaDiem;
       else
          docNet += docGiuaDiem;
+      
+      printf( "diTheoDoiDuong: diemMoi.doSang %d\n", diemMoi.doSang );
       
       diem0 = diemMoi;
       net->mangDiem[dem] = diem0;
@@ -2611,6 +2610,46 @@ void veDuongCap( float *anh, unsigned int beRong, unsigned int beCao, Diem diem0
    }
 }
 
+void veChuNhatTrongAnh( unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh, ChuNhat chuNhat, unsigned int mau ) {
+   
+   // ---- kiểm tra chữ nhật không đi ra ngoài ảnh
+   if( chuNhat.trai < 0 )
+      chuNhat.trai = 0;
+   
+   if( chuNhat.phai > beRongAnh )
+      chuNhat.phai = beRongAnh;
+   
+   if( chuNhat.duoi < 0 )
+      chuNhat.duoi = 0;
+   
+   if( chuNhat.tren > beCaoAnh )
+      chuNhat.tren = beCaoAnh;
+   
+   unsigned char mauDo = mau >> 24;
+   unsigned char mauLuc = mau >> 16;
+   unsigned char mauXanh = mau >> 8;
+   unsigned char doDuc = mau;
+
+   unsigned short soHang = chuNhat.duoi;
+   
+   while( soHang < chuNhat.tren ) {
+
+      unsigned soCot = chuNhat.trai;
+      unsigned int diaChiAnh = (beRongAnh*soHang + soCot) << 2;
+
+      while( soCot < chuNhat.phai ) {
+         anh[diaChiAnh] = mauDo;
+         anh[diaChiAnh + 1] = mauLuc;
+         anh[diaChiAnh + 2] = mauXanh;
+         
+         diaChiAnh += 4;
+         soCot++;
+      }
+      
+      soHang++;
+   }
+}
+
 
 #pragma mark ---- Vẽ Số Và Chữ Cái
 void veSoCai( char *xauSo, unsigned short x, unsigned short y, unsigned char *anh, unsigned int beRongAnh, unsigned int beCaoAnh ) {
@@ -2921,7 +2960,7 @@ unsigned char *toMauAnh( unsigned char *anh, unsigned int beRong, unsigned int b
 
       Diem mangDiemThichThu[512];
       unsigned char soLuongDiemThichThu = tìmCacDiemThichThu( anh, beRong, beCao, mangDiemThichThu );
-      
+ 
       Net mangNet[512];
       unsigned short soLuongNet = timCacNet( anh, beRong, beCao, 10, mangDiemThichThu, soLuongDiemThichThu, mangNet );
 

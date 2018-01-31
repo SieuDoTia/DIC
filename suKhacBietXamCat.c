@@ -21,6 +21,14 @@
 #define kLOAI_THAP 0
 #define kLOAI_CAO 1
 
+/* Thông Tin */
+typedef struct {
+   unsigned char sangToiThieu;
+   unsigned char sangToiDa;
+   unsigned char trungBing;
+   unsigned char giaTriGiua;
+} PhanPhoi;
+
 
 /* Điểm */
 typedef struct {
@@ -64,6 +72,9 @@ typedef struct {
 /* tính sự khác biệt giữa hai hình */
 unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *duongTapTin1, unsigned int beRong, unsigned int beCao, unsigned char daoNghich );
 
+/* tính phân phối ảnh */
+void tinhPhanPhoiAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao );
+
 /* ghép tên ảnh */
 void ghepTenAnh( char *tenAnh, char *tenGhep0, char *tenGhep1 );
 
@@ -88,15 +99,16 @@ void chinhDoSang( unsigned char *anh, unsigned int beRong, unsigned int beCao, c
 /* vuông hóa 8x8 */
 void vuongHoa_giaTriTrungBinh( unsigned char *anh, unsigned int beRong, unsigned int beCao );
 
-/* Tìm Mặt Nạ */
-ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang, unsigned short cachBoQua );
+/* Tìm Khung Ảnh Sáng */
+ChuNhat tìmKhungAnhSang( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang );
 
 unsigned char *catAnh( unsigned char *anh, unsigned int beRong, unsigned beCao, ChuNhat *matNa );
 
 
 /* Lưu cắt ngang */   // GIÚP NGHIÊNG CỨU VỀ ẢNH
 void luuCatNgangToanBoChoAnh( unsigned char *anhGoc, unsigned int beRong, unsigned int beCao );
-void luuCatNgangMotTamChoAnh( unsigned char *anhGoc, unsigned int beRong, unsigned int beCao, unsigned int soHangCatNgang );
+void luuCatNgangMotTamChoAnh( char *tenAnhCatNgang, unsigned char *anhGoc, unsigned int beRong, unsigned int beCao, unsigned int soHangCatNgang );
+unsigned char *toMauDoSangAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao );
 
 void veDuong( unsigned char *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1, unsigned int mau );
 void veDuongCap( float *anh, unsigned int beRong, unsigned int beCao, Diem diem0, Diem diem1, float cap );
@@ -145,9 +157,9 @@ int main( int argc, char **argv ) {
          
          unsigned char *anhMatNa1 = boLocTrungBinh( duLieuTep1, beRongTep1, beCaoTep1, 21 );
          unsigned char gioiHanDoSang = 100;
-         unsigned short cachBoQuaCanh = 0;
-         ChuNhat matNa0 = tìmMatNa( anhMatNa0, beRongTep0, beCaoTep0, gioiHanDoSang, cachBoQuaCanh );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
-         ChuNhat matNa1 = tìmMatNa( anhMatNa1, beRongTep1, beCaoTep1, gioiHanDoSang, cachBoQuaCanh );
+ 
+         ChuNhat matNa0 = tìmKhungAnhSang( anhMatNa0, beRongTep0, beCaoTep0, gioiHanDoSang );  // <---- dùng nữa bộ lọc để mịn hoá ảng sự khạc biệt
+         ChuNhat matNa1 = tìmKhungAnhSang( anhMatNa1, beRongTep1, beCaoTep1, gioiHanDoSang );
          // ---- ảnh hơi mờ ở cạnh dưới và trên từ bộ lọc, cắt bớt một chút
          matNa0.tren -= 10;
          matNa0.duoi += 10;
@@ -181,33 +193,42 @@ int main( int argc, char **argv ) {
 
          printf( "Mặt nạ giao hai ảnh: t %d p %d d %d t %d\n", matNaGiao.trai, matNaGiao.phai, matNaGiao.duoi, matNaGiao.tren );
 
-         // ---- cắt hình
+         // ==== CẮT ẢNH
          printf( "CatAnh " );
          unsigned char *anhCat = catAnh( anhSuKhacBiet, beRongTep0, beCaoTep0, &matNaGiao );
          unsigned short beRongAnhCat = matNaGiao.phai - matNaGiao.trai;
          unsigned short beCaoAnhCat = matNaGiao.tren - matNaGiao.duoi;
          printf( "%d x %d\n", beRongAnhCat, beCaoAnhCat );
   
-         // ---- bộ lọc ảnh
+         // ==== BỘ LỌC ẢNH
          printf( "Đang bộ lọc ảnh cắt: trungBinh\n" );
          unsigned char *anhBoLocTrungBinh = boLocTrungBinh( anhCat, beRongAnhCat, beCaoAnhCat, 75 );
          printf( "Đang bộ lọc ảnh cắt: trungBinhDoc\n" );
          unsigned char *anhBoLocTrungBinhDoc = boLocTrungBinhDoc( anhBoLocTrungBinh, beRongAnhCat, beCaoAnhCat, 70  );
          char tenAnhBoLoc[256];
          sprintf( tenAnhBoLoc, "%s_%s", "AnhBoLoc", tenAnhToMau );
-         
          luuAnhPNG_BGRO( tenAnhBoLoc, anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat );
+
          
-         // ---- nghiêng cứu
-         luuCatNgangMotTamChoAnh( anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat, beCaoAnhCat-1 );
+         // ==== NGHIÊNG CỨU
+         tinhPhanPhoiAnh( anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat );
+         // ----  cắt ngang
+         char tenAnhCatNgang[256];
+         sprintf( tenAnhCatNgang, "%s_%s", "AnhCatNgang", tenAnhToMau );
+         luuCatNgangMotTamChoAnh( tenAnhCatNgang, anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat, beCaoAnhCat-1 );
+
+         // ---- độ sáng
+         unsigned char *anhDoSang = toMauDoSangAnh( anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat );
+         char tenAnhDoSang[256];
+         sprintf( tenAnhDoSang, "%s_%s", "AnhDoSang", tenAnhToMau );
+         luuAnhPNG_BGRO( tenAnhDoSang, anhDoSang, beRongAnhCat, beCaoAnhCat );
+         free( anhDoSang );
       
-         // ---- tô màu ảnh
+         // ==== TÔ MÀU ẢNH
          printf( "Tô màu ảnh cắt\n" );
          unsigned int beRongAnhTo;
          unsigned int beCaoAnhTo;
          unsigned char *anhToMau = toMauAnh( anhBoLocTrungBinhDoc, beRongAnhCat, beCaoAnhCat, &beRongAnhTo, &beCaoAnhTo );
-
-
          luuAnhPNG_BGRO( tenAnhToMau, anhToMau, beRongAnhTo, beCaoAnhTo );
 
          free( anhSuKhacBiet );
@@ -351,6 +372,46 @@ unsigned char *tinhSuKhacBietXam( unsigned char *duongTapTin0, unsigned char *du
 }
 
 
+#pragma mark ---- Tính Phân Phối Ảnh
+// ---- chỉ đếm kênh màu đỏ
+void tinhPhanPhoiAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
+   
+   unsigned int phanPhoiAnh[256] = {
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, //  32
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, //  64
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, //  96
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, // 128
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, // 160
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, // 192
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, // 224
+      0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, // 256
+   };
+   
+   unsigned int diaChiAnh = 0;
+   unsigned int soHang = 0;
+   while( soHang < beCao ) {
+      unsigned short soCot = 0;
+      while( soCot < beRong ) {
+         // ---- bỏ độ sáng trong phân phối
+         unsigned char doSangAnh = anh[diaChiAnh];
+         phanPhoiAnh[doSangAnh]++;
+      
+         diaChiAnh += 4;
+         soCot++;
+      }
+      soHang++;
+   }
+   
+   unsigned short chiSoPhanPhoi = 0;
+   printf( "PÂN PHỐI ẢNH:\n" );
+   
+   while( chiSoPhanPhoi < 256 ) {
+      
+      if( phanPhoiAnh[chiSoPhanPhoi] )
+         printf( "%3d: %5d\n", chiSoPhanPhoi, phanPhoiAnh[chiSoPhanPhoi] );
+      chiSoPhanPhoi++;
+   }
+}
 
 #pragma mark ---- Chỉnh Chênh Lệch
 void chinhChenhLech( unsigned char *anh, unsigned int beRong, unsigned int beCao, float triSoChenLech ) {
@@ -1026,6 +1087,7 @@ void gioiHan( unsigned char *anh, unsigned int beRong, unsigned int beCao, unsig
 }
 
 #pragma mark ---- Tìm Mặt Na
+/*
 ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang, unsigned short cachBoQua ) {
 
    // ---- quét dòng và tìm hàng các hàng có giá trị hơn giới hạn
@@ -1079,6 +1141,219 @@ ChuNhat tìmMatNa( unsigned char *anhMatNa, unsigned int beRong, unsigned int be
    matNa.tren = ketThucMatNa;
    
    return matNa;
+} */
+
+#pragma mark ---- Tìm Mặt Na
+// Tìm khu vực sáng trong ảnh
+// Dùng mặtNạBit để biết phần nào sáng
+// Dùng sốLượngBiếnĐổiChếĐộ để hàng cgất trường số lượng cột sáng liên tiếp rất ít (số lượng biến đổi nên ≤ 2)
+
+//    toàn bộ sáng                 một bên sáng (trái)        một bên sáng (phải)                sáng giữa
+// +-----------------+ 0x1 (0)   +----------+------+ 0x1 (1)   +-----+-----------+ 0x2 (1)   +-----------------+ 0x0 (2)
+// |                 | 0x1 (0)   |   sáng   |      | 0x1 (1)   |     |   sáng    | 0x2 (1)   |  +----------+   | 0x2 (2)
+// |    sáng         | 0x1 (0)   |          |      | 0x1 (1)   |     |           | 0x2 (1)   |  |   sáng   |   | 0x2 (2)
+// |                 | 0x1 (0)   +----------+      | 0x1 (1)   |     +-----------+ 0x2 (1)   |  |          |   | 0x2 (2)
+// |                 | 0x1 (0)   |       tối       | 0x0 (0)   |       tối       | 0x0 (0)   |  +----------+   | 0x2 (2)
+// |                 | 0x1 (0)   |                 | 0x0 (0)   |                 | 0x0 (0)   |      tối        | 0x0 (0)
+// +-----------------+ 0x1 (0)   +-----------------+ 0x0 (0)   +-----------------+ 0x0 (0)   +-----------------+ 0x0 (0)
+
+// mặt nạ 0x1 hay 0x2
+
+// Vài trường hợp sai lầm
+// +-----------------+ 0x0 (0)   +-----+-----+-----+ 0x5 (2)   +-----+---+-----+-+ 0x5 (3)   +-+----+----+-----+ 0x6 (3)
+// |                 | 0x0 (0)   |sáng |     |sáng | 0x5 (2)   |sáng |   |sáng | | 0x5 (3)   | |sáng|    |sáng | 0x6 (3)
+// |     tối         | 0x0 (0)   |     |     |     | 0x5 (2)   |     |   |     | | 0x5 (3)   | |    |    |     | 0x6 (3)
+// |                 | 0x0 (0)   +-----+     +-----+ 0x5 (2)   +-----+   +-----+ | 0x5 (3)   + -----+    +-----+ 0x6 (3)
+// |                 | 0x0 (0)   |      tối        | 0x0 (0)   |      tối        | 0x0 (0)   |      tối        | 0x0 (0)
+// |                 | 0x0 (0)   |                 | 0x0 (0)   |                 | 0x0 (0)   |                 | 0x0 (0)
+// +-----------------+ 0x0 (0)   +-----------------+ 0x0 (0)   +-----------------+ 0x0 (0)   +-----------------+ 0x0 (0)
+
+// ranh khu vực sáng có thể nghiên  /   \ nữa
+
+
+#define kCHE_DO__TOI  0
+#define kCHE_DO__SANG 1
+
+ChuNhat tìmKhungAnhSang( unsigned char *anhMatNa, unsigned int beRong, unsigned int beCao, unsigned char gioiHanDoSang ) {
+   
+   // ---- quét dòng và tìm hàng các hàng có giá trị hơn giới hạn
+   unsigned int soHang = 0;
+ //  int batDauMatNa = -1;
+ //  int ketThucMatNa = -1;
+   
+   // ---- đếm số lượng hàng sáng
+   unsigned int soLuongHangSangLienTiep = 0;
+   unsigned int soHangBatDauSangLienTiep = 0;
+
+   // ---- cho giữ vị tri doàn sáng lớn nhất
+   unsigned int soHangDoanSangLonNhat = 0;
+   unsigned int soLuongSangLonNhat = 0;
+   
+   unsigned int benTraiLonNhat_doanHienTai = 0;
+   unsigned int benPhaiNhoNhat_doanHienTai = beRong;
+   
+   unsigned int benTraiLonNhat_doanLonNhat = 0;
+   unsigned int benPhaiNhoNhat_doanLonNhat = beRong;
+   
+   // ---- mảng biến đổi - chỉ cần hai biến đổi đầu, nếu có biến đổi nhiều hơn sẽ không nhận hàng đó
+   unsigned int mangSoCotBienDoiCheDo[2];
+   
+   unsigned char cheDo = kCHE_DO__TOI;
+   
+   while( soHang < beCao ) {
+//      printf( "soHang %d\n", soHang );
+      unsigned char matNaBit = 0x00;
+      unsigned char soLuongBienDoiCheDo = 0;
+
+      unsigned int soLuongDiemAnh = 0;   // số lượng điểm ảnh tối hay sáng
+      unsigned int diaChiCot = soHang*beRong << 2;
+      unsigned int soCot = 0;
+      unsigned char hetHonGioiHan = kDUNG;  // BOOL, hết hơn giới hạn
+      while( soCot < beRong ) {
+         //        printf( "%d doSang %d\n", soCot, soHang );
+         if( anhMatNa[diaChiCot] >= gioiHanDoSang ) {
+            if( cheDo == kCHE_DO__TOI ) {
+//               printf( "   soCotHetToi %d (TOI) soLuongDiemAnhTruoc %d\n", soCot, soLuongDiemAnh );
+               cheDo = kCHE_DO__SANG;
+               soLuongDiemAnh = 0;
+               
+               // ---- chỉ giữ hai biến đổi chế độ đầu tiên
+               if( soLuongBienDoiCheDo < 2 )
+                  mangSoCotBienDoiCheDo[soLuongBienDoiCheDo] = soCot;
+
+               // ---- chỉ lảm nếu không ở cột 0
+               if( soCot ) {
+                  soLuongBienDoiCheDo++;
+               }
+            }
+            else
+               soLuongDiemAnh++;
+
+         }
+         else {
+            if( cheDo == kCHE_DO__SANG ) {
+//               printf( "   soCotHetSang %d (SANG) soLuongDiemAnhTruoc %d\n", soCot, soLuongDiemAnh );
+               cheDo = kCHE_DO__TOI;
+               soLuongDiemAnh = 0;
+               
+               // ---- chỉ giữ hai biến đổi chế độ đầu tiên
+               if( soLuongBienDoiCheDo < 2 )
+                  mangSoCotBienDoiCheDo[soLuongBienDoiCheDo] = soCot;
+
+               // ---- chỉ lảm nếu không ở cột 0
+               if( soCot ) {
+                  matNaBit |= kCHE_DO__SANG << soLuongBienDoiCheDo;  // không làm cho chế độ tối
+                  soLuongBienDoiCheDo++;
+               }
+            }
+            else
+               soLuongDiemAnh++;
+   
+         }
+         soCot++;
+         diaChiCot += 4;
+      }
+      
+      // ---- hết hàng, đật lại số lượng điểm ảnh nhưng đừng đổi chế độ
+      if( cheDo == kCHE_DO__TOI ) {
+    //     printf( "   soCotHetToi %d (TOI) soLuongTruoc %d\n", soCot-1, soLuongDiemAnh );
+         soLuongDiemAnh = 0;
+      }
+      else {
+   //      printf( "   soCotHetSang %d (SANG) soLuongTruoc %d\n", soCot-1, soLuongDiemAnh );
+         soLuongDiemAnh = 0;
+         matNaBit |= kCHE_DO__SANG << soLuongBienDoiCheDo;
+      }
+      
+      // ----
+      if( (matNaBit == 0x1) || (matNaBit == 0x02) ) {   // tối -> sáng  hay toàn hàng sáng
+         soLuongHangSangLienTiep++;
+         
+         // ---- phân tích số lượng điểm ảnh tối bên trái và phải của hàng này
+         // 0                                            bề rộng
+         // +------------+--------------------------+------------+
+         // |              |                           |         |
+         // |   tối      |          sáng           |      tối    |
+         // |           |                             |          |    <----- hàng hiện tại
+         //                          ...
+         //             ^                             ^
+         //             |                             |
+         //         bên trái lớn                bên phải nhỏ
+      
+         unsigned int benTraiLon = 0;    // số cột lớn nhất đến điểm ảnh sáng (hơn giới hạn)
+         unsigned int benPhaiNho = beRong;  // số cột nhỏ nhất sau đến điểm ảnh tối (ít giới hạn)
+            
+         if( matNaBit == 0x01 ) {
+            // ---- đặt lại cho đoán mới
+            // benTraiToi = 0;
+            if( soLuongBienDoiCheDo )
+               benPhaiNho = mangSoCotBienDoiCheDo[0];
+        //    else
+        //       benPhaiNhoNhat = 0;
+         }
+         else {  // ( matNaBit = 0x02 ) {
+            benTraiLon = mangSoCotBienDoiCheDo[0];
+            
+            if( soLuongBienDoiCheDo == 2 )
+               benPhaiNho = mangSoCotBienDoiCheDo[1];
+  //          else
+  //             benPhaiNhoNhat = 0;
+         }
+   
+   //      printf( "   benTraiLon %d  benPhaiNho %d\n", benTraiLon, benPhaiNho );
+ 
+         
+         // ---- tìm đợcc đoàn mới
+         if( soLuongHangSangLienTiep == 1 ) {
+//            printf( "****** batDoanMoi: soCotBienDoi %d\n", mangSoCotBienDoiCheDo[0] );
+            soHangBatDauSangLienTiep = soHang;
+            benTraiLonNhat_doanHienTai = benTraiLon;
+            benPhaiNhoNhat_doanHienTai = benPhaiNho;
+         }
+         else {
+            if( benTraiLonNhat_doanHienTai < benTraiLon )
+               benTraiLonNhat_doanHienTai = benTraiLon;
+            if( benPhaiNhoNhat_doanHienTai > benPhaiNho )
+               benPhaiNhoNhat_doanHienTai = benPhaiNho;
+         }
+         
+         // ---- xem nếu đoàn sáng này lớn hơn đoán trước
+         if( soLuongHangSangLienTiep > soLuongSangLonNhat ) {
+//            printf( "soCotBienDoi %d %d\n", mangSoCotBienDoiCheDo[0], mangSoCotBienDoiCheDo[1] );
+            soHangDoanSangLonNhat = soHangBatDauSangLienTiep;
+            soLuongSangLonNhat = soLuongHangSangLienTiep;
+            
+            // ---- giử kỷ lục của đoán sáng lớn nhất
+            benTraiLonNhat_doanLonNhat = benTraiLonNhat_doanHienTai;
+            benPhaiNhoNhat_doanLonNhat = benPhaiNhoNhat_doanHienTai;
+         }
+         
+
+//         printf( " ------------ batDau %d  soLan %d soLuongSangLonNhat %d traiLonNhatDoanHT %d  phaiNhoNhatDoanHT %d  ", soHangBatDauSangLienTiep, soLuongHangSangLienTiep,
+//                soLuongSangLonNhat, benTraiLonNhat_doanLonNhat, benPhaiNhoNhat_doanLonNhat );
+      }
+      else {
+         soLuongHangSangLienTiep = 0;
+         benTraiLonNhat_doanHienTai = 0;
+         benPhaiNhoNhat_doanHienTai = beRong;
+      }
+
+      soHang++;
+   }
+
+   if( soHangDoanSangLonNhat < 100 ) {
+      printf( "TimNaMat: không thể tìm khu vực sáng rộng hơn 100 hàng mà sáng hơn %d độ sáng\n", gioiHanDoSang );
+      exit(0);
+   }
+
+
+   ChuNhat khungAnhSang;
+   khungAnhSang.trai = benTraiLonNhat_doanLonNhat;
+   khungAnhSang.phai = benPhaiNhoNhat_doanLonNhat;
+   khungAnhSang.duoi = soHangDoanSangLonNhat;
+   khungAnhSang.tren = soHangDoanSangLonNhat + soLuongSangLonNhat - 1;
+//   printf( "TimKhungAngSang: khung anh %d %d  %d %d\n", khungAnhSang.trai, khungAnhSang.phai, khungAnhSang.duoi, khungAnhSang.tren );
+   return khungAnhSang;
 }
 
 unsigned char *catAnh( unsigned char *anhGoc, unsigned int beRongGoc, unsigned int beCaoGoc, ChuNhat *matNa ) {
@@ -1108,7 +1383,7 @@ unsigned char *catAnh( unsigned char *anhGoc, unsigned int beRongGoc, unsigned i
       }
    }
    else {
-      printf( "catAnh: vấn  ̣ề dành trí nhớ cho ảnh cắt\n" );
+      printf( "catAnh: vấn đề dành trí nhớ cho ảnh cắt\n" );
       return NULL;
    }
    
@@ -1401,7 +1676,7 @@ unsigned short timCacNet( unsigned char *anh, unsigned int beRong, unsigned int 
 
       soDiem++;
    }
-   printf( "timNet: soLuongNet %d \n", soLuongNet );
+//   printf( "timNet: soLuongNet %d \n", soLuongNet );
 
    return soLuongNet;
 }
@@ -1439,7 +1714,7 @@ Diem diTheoDoiDuongVaChoDiemCuoi( unsigned char *anh, unsigned int beRong, unsig
       diemTiepTheo.huongX = diem0.huongX;
       diemTiepTheo.huongY = diem0.huongY;
 
-      printf( " diTheoDoiDuong: truoc  diem0 (%d; %d)   diemTiep: (%d ; %d)  huong %5.3f %5.3f  buoc %5.3f\n", diem0.x, diem0.y, diemTiepTheo.x, diemTiepTheo.y, diem0.huongX, diem0.huongY, buoc );
+//      printf( " diTheoDoiDuong: truoc  diem0 (%d; %d)   diemTiep: (%d ; %d)  huong %5.3f %5.3f  buoc %5.3f\n", diem0.x, diem0.y, diemTiepTheo.x, diemTiepTheo.y, diem0.huongX, diem0.huongY, buoc );
 
       // ---- nên kiểm tra GIỚI HẠN TRÁi PHẢI
       if( diemTiepTheo.x > gioiHanPhai ) {
@@ -2440,7 +2715,7 @@ void lậtNgược( unsigned char *anh, unsigned int beRong, unsigned int beCao 
    }
 }
 
-#pragma mark ---- Cắt Ngang
+#pragma mark ---- Cắt Ngang (CHO NGHIÊNG CỨU ẢNH)
 /*
  Quét ngang +x và tìm điểm thấp và cao
  • Điểm thấp là màu giữa đoạn màu, điểm cao là kết thúc đoạn màu này và đầu đoạn màu tiếp
@@ -2483,13 +2758,9 @@ void luuCatNgangToanBoChoAnh( unsigned char *anhGoc, unsigned int beRong, unsign
    free( anhCatNgangTruoc );
 }
 
-void luuCatNgangMotTamChoAnh( unsigned char *anhGoc, unsigned int beRong, unsigned int beCao, unsigned int soHangCatNgang ) {
+void luuCatNgangMotTamChoAnh( char *tenAnhCatNgang, unsigned char *anhGoc, unsigned int beRong, unsigned int beCao, unsigned int soHangCatNgang ) {
    
    unsigned char *anhCatNgang = taoAnhDoSangChoHangCuaAnh( anhGoc, beRong, beCao, soHangCatNgang );   // 256 << 2
-   char tenAnhCatNgang[256];
-   sprintf( tenAnhCatNgang, "AnhCatNgang_%03d.png", soHangCatNgang );
-   //      printf( "Phân tích vận tốc trong ảnh: %s\n", tenAnh );
-   //      phanTichVanTocGiuaHaiAnh( anhCatNgangTruoc, anhCatNgangSau, beRong, beCao );
 
    luuAnhPNG_BGRO( tenAnhCatNgang, anhCatNgang, beRong, 256 );
    
@@ -2538,6 +2809,30 @@ unsigned char *taoAnhDoSangChoHangCuaAnh( unsigned char *anhGoc, unsigned int be
    return anhCatNgang;
 }
 
+unsigned char *toMauDoSangAnh( unsigned char *anh, unsigned int beRong, unsigned int beCao ) {
+   
+   unsigned int diaChiCuoi = beRong*beCao << 2;
+   unsigned char *anhToMau = malloc( diaChiCuoi );
+   
+   if( anhToMau ) {
+      
+      unsigned int diaChiAnh = 0;
+      
+      while( diaChiAnh < diaChiCuoi ) {
+         unsigned char doSang = anh[diaChiAnh];
+         anhToMau[diaChiAnh] = doSang << 3;
+         anhToMau[diaChiAnh+1] = doSang << 1;
+         anhToMau[diaChiAnh+2] = doSang << 2;
+         anhToMau[diaChiAnh+3] = 0xff;
+         diaChiAnh += 4;
+      }
+   }
+   else {
+      printf( "TôMàuẢn: vấn đề tạo tô màu\n" );
+   }
+   
+   return anhToMau;
+}
 
 #pragma mark ---- Tô Màu
 

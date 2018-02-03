@@ -138,7 +138,7 @@ unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, uns
       
       // ---- nâng cấp mảng thứ tự (trao đổi hàng)
       unsigned char so = mangThuTu[soHangDangDungDeKhu];
-      mangThuTu[soHangDangDungDeKhu] = chiSoHangLonNhat;
+      mangThuTu[soHangDangDungDeKhu] = mangThuTu[chiSoHangLonNhat];
       mangThuTu[chiSoHangLonNhat] = so;
       
       // ==== chia toàn bộ hàng bởi giá trị lớn nhất

@@ -2,7 +2,7 @@
  *  MatBezierTốiƯu.c
  *
  *  Phiên bản đầu: 2018.01.18
- *  Phiên bản mới: 2018.02.21
+ *  Phiên bản mới: 2018.02.22
  
  Tìm một mặt Bezier tối ưu với điểm dữ liếu
  Nó dùng x ≈ t, y ≈ u (tham số t của cong Bezier), không đúng nhưng dễ làm
@@ -44,8 +44,8 @@ typedef struct {
    float tren;
 } ChuNhatFloat;
 
-unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, unsigned char soLuongCotChanh,
-          float *maTranPhu, unsigned char soLuongHangPhu, unsigned char soLuongCotPhu, unsigned short *mangThuTu );
+unsigned char khuMaTran( float *maTranChanh, unsigned short soLuongHangChanh, unsigned short soLuongCotChanh,
+          float *maTranPhu, unsigned short soLuongHangPhu, unsigned short soLuongCotPhu, unsigned short *mangThuTu );
 void tinhNghiem( float *maTranChanh, unsigned char soLuongHangChanh, unsigned char soLuongCotChanh,
                float *maTranPhu, unsigned char soLuongHangPhu, unsigned char soLuongCotPhu, unsigned short *mangThuTu );
 
@@ -81,9 +81,8 @@ void matBezierTuongDuong( float *maTranChanh, float *maTranPhu, Diem *mangDiem, 
 int main( int argc, char **argv ) {
    
    // ==== dữ liệu
-   unsigned short soLuongDiem = 25;
-   // ---- dữ liệu
-   Diem mangDiem[25];
+
+   Diem mangDiem[50];
 
    // ---- cộng thức ví dụ z(x; y) = x*x + y*y
    unsigned short chiSoMang = 0;
@@ -93,12 +92,12 @@ int main( int argc, char **argv ) {
    while( soDiemY < 5 ) {
       unsigned char soDiemX = 0;
       float y = soDiemY*0.25f;
-      while( soDiemX < 5 ) {
-         float x = soDiemX*0.25f;
+      while( soDiemX < 10 ) {
+         float x = soDiemX*0.125f;
          mangDiem[chiSoMang].x = x;
          mangDiem[chiSoMang].y = y;
-         mangDiem[chiSoMang].z = 2.0f - (x*x + y*y);
-         printf( "%d %5.3f; %5.3f; %5.3f\n", soDiemX, x, y, mangDiem[chiSoMang].z );
+         mangDiem[chiSoMang].z = 0.0;//2.0f - (x*x + y*y);
+         printf( "%d %5.3f; %5.3f; %5.3f\n", chiSoMang, x, y, mangDiem[chiSoMang].z );
          soDiemX++;
          chiSoMang++;
       }
@@ -106,16 +105,21 @@ int main( int argc, char **argv ) {
       soDiemY++;
    }
    
+   unsigned short soLuongDiem = chiSoMang;
+
    unsigned char soLuongHangMat = 1;
-   unsigned char soLuongCotMat = 1;
+   unsigned char soLuongCotMat = 2;
    
    // ---- tạo ma trận chứa hết mặt
    unsigned short beRongMaTranGom = (soLuongCotMat*soLuongHangMat << 5) - ((soLuongCotMat+soLuongHangMat) << 3);
    unsigned short beRongLoiMaTranGom = soLuongCotMat*soLuongHangMat << 4;
    printf( "beRongMaTranGom %d   beRongLoiMaTranGom %d\n", beRongMaTranGom, beRongLoiMaTranGom );
-   float *maTranGomChanh = malloc( sizeof( float )*beRongMaTranGom*beRongMaTranGom );
-   float *maTranGomPhu = malloc( sizeof( float )*beRongMaTranGom*3 );
-   
+
+   float *maTranGomChanh = calloc( sizeof( float ), beRongMaTranGom*beRongMaTranGom );
+   float *maTranGomPhu = calloc( sizeof( float ), beRongMaTranGom*3 );
+//   float *maTranLoiGom = calloc( sizeof( float ), beRongLoiMaTranGom*beRongLoiMaTranGom );
+
+   // ---- tính phạm vi
    ChuNhatFloat phamVi;
    float buocPhamVi_x = 1.0f/soLuongCotMat;
    float buocPhamVi_y = 1.0f/soLuongHangMat;
@@ -136,9 +140,19 @@ int main( int argc, char **argv ) {
          float maTranChanhMat[256];  // 16 x 16
          float maTranPhuMat[48];     // 16 x 3
          
+         printf( " phamVi %5.3f %5.3f %5.3f %5.3f\n", phamVi.trai, phamVi.phai, phamVi.duoi, phamVi.tren );
+         
          matBezierTuongDuong( maTranChanhMat, maTranPhuMat, mangDiem, soLuongDiem, phamVi );
+         
+         // ---- chép vào ma trận chánh
          chepMaTranVaoMaTran( maTranChanhMat, 16, 16, maTranGomChanh, beRongMaTranGom, beRongMaTranGom, soMat << 4, soMat << 4 );
+         
+         // ---- chép vào ma trận phụ
          chepMaTranVaoMaTran( maTranPhuMat, 3, 16, maTranGomPhu, 3, beRongMaTranGom, 0, soMat << 4 );
+         
+         // ------------
+         chieu_maTran( maTranChanhMat, 16, 16 );
+         chieu_maTran( maTranPhuMat, 3, 16 );
 
          soMat++;
          phamVi.trai += buocPhamVi_x;
@@ -198,7 +212,7 @@ int main( int argc, char **argv ) {
             // ---- chép ma trận kết nối dộc 16 x 8 mặt dưới
             // viTri hang; cotDuoi
 //            printf( " doc 8 x 16 duoi  (%d;%d)\n", hangChoMat, cotChoMatDuoi );
-            chepGiaTriVaoMaTran( 'x', 8, 16, maTranGomChanh, beRongMaTranGom, beRongMaTranGom, hangChoMat, cotChoMatDuoi );
+//            chepGiaTriVaoMaTran( 'x', 8, 16, maTranGomChanh, beRongMaTranGom, beRongMaTranGom, hangChoMat, cotChoMatDuoi );
             ketNoiNgang_8x16_matDuoi( maTranGomChanh, beRongMaTranGom, beRongMaTranGom, hangChoMat, cotChoMatDuoi );
 
             // ---- chép ma trận kết nối dộc 16 x 8 mặt trên
@@ -234,7 +248,8 @@ int main( int argc, char **argv ) {
 
    unsigned char coNghiem = khuMaTran( maTranGomChanh, beRongMaTranGom, beRongMaTranGom, maTranGomPhu, beRongMaTranGom, 3, mangThuTu );
    printf( "coNghiem: %d\n", coNghiem );
-
+   chieu_maTran( maTranGomChanh, beRongMaTranGom, beRongMaTranGom );
+   
    if( coNghiem ) {
       tinhNghiem( maTranGomChanh, beRongMaTranGom, beRongMaTranGom, maTranGomPhu, beRongMaTranGom, 3, mangThuTu );
     
@@ -256,21 +271,23 @@ int main( int argc, char **argv ) {
 
    }
 
+   free( maTranGomChanh );
+   free( maTranGomPhu );
    return 1;
 }
 
 
-// ----- chỉ được xài cho hệ phương tuyến tối đa 128 x 128
-unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, unsigned char soLuongCotChanh,
-          float *maTranPhu, unsigned char soLuongHangPhu, unsigned char soLuongCotPhu, unsigned short *mangThuTu ) {
+// ----- chỉ được xài cho hệ phương tuyến
+unsigned char khuMaTran( float *maTranChanh, unsigned short soLuongHangChanh, unsigned short soLuongCotChanh,
+          float *maTranPhu, unsigned short soLuongHangPhu, unsigned short soLuongCotPhu, unsigned short *mangThuTu ) {
    
-   unsigned char soHangDangDungDeKhu = 0;
+   unsigned short soHangDangDungDeKhu = 0;
    
    while( soHangDangDungDeKhu < soLuongHangChanh - 1) {
    
       float giaTriLonNhat = 0.0f;
-      unsigned char chiSoHangLonNhat;
-      unsigned char soHang = soHangDangDungDeKhu;
+      unsigned short chiSoHangLonNhat;
+      unsigned short soHang = soHangDangDungDeKhu;
 
       while( soHang < soLuongHangChanh ) {
          // ---- rút giá trị tuyệt đối của hàng này
@@ -295,7 +312,7 @@ unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, uns
 //      printf(" mangThuTu  doi soHangDangDungDeKhu %d voi chiSoHangLonNhat %d\n", soHangDangDungDeKhu, chiSoHangLonNhat );
 //      printf("           doi mangThutu[soHangDangDungDeKhu] %d voi mangThuTu[chiSoHangLonNhat] %d\n", mangThuTu[soHangDangDungDeKhu], mangThuTu[chiSoHangLonNhat] );
       // ---- nâng cấp mảng thứ tự (trao đổi hàng)
-      unsigned char so = mangThuTu[soHangDangDungDeKhu];
+      unsigned short so = mangThuTu[soHangDangDungDeKhu];
       mangThuTu[soHangDangDungDeKhu] = mangThuTu[chiSoHangLonNhat];
       mangThuTu[chiSoHangLonNhat] = so;
       
@@ -306,7 +323,7 @@ unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, uns
 //      printf("  %d\n", mangThuTu[3]);
    
       // ==== chia toàn bộ hàng bởi giá trị lớn nhất
-      unsigned soCot = soHangDangDungDeKhu + 1;
+      unsigned short soCot = soHangDangDungDeKhu + 1;
       // ---- mẫu số để chia hàng này
 
       float mauSo = maTranChanh[mangThuTu[soHangDangDungDeKhu]*soLuongCotChanh + soHangDangDungDeKhu];  // không thể dùng biến giá trị lớn nhất vỉ có lẻ nó âm
@@ -334,7 +351,7 @@ unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, uns
       }
       
       // ==== khử các phân tử trong hàng ở dưới
-      unsigned char soHangKhu = soHangDangDungDeKhu+1;
+      unsigned short soHangKhu = soHangDangDungDeKhu+1;
       
       while( soHangKhu < soLuongHangChanh ) {
          float giaTriNhan = maTranChanh[mangThuTu[soHangKhu]*soLuongCotChanh + soHangDangDungDeKhu];
@@ -382,7 +399,7 @@ unsigned char khuMaTran( float *maTranChanh, unsigned char soLuongHangChanh, uns
       
       // ----
       float *phanTuChia = &(maTranPhu[mangThuTu[soHangDangDungDeKhu]*soLuongCotPhu]);
-      unsigned char soCot = 0;
+      unsigned short soCot = 0;
       while( soCot < soLuongCotPhu ) {
          *phanTuChia /= mauSo;
          phanTuChia++;
@@ -457,7 +474,7 @@ void matBezierTuongDuong( float *maTranChanh, float *maTranPhu, Diem *mangDiem, 
    }
 
    chiSoMaTran = 0;
-   while( chiSoMaTran < 32 ) {
+   while( chiSoMaTran < 48 ) {
       maTranPhu[chiSoMaTran] = 0.0f;
       chiSoMaTran++;
    }
@@ -482,14 +499,14 @@ void matBezierTuongDuong( float *maTranChanh, float *maTranPhu, Diem *mangDiem, 
          trongPhamVi = kSAI;
       
       if( trongPhamVi ) {
-         
          // ---- tính ma trận
          float t = (x - phamVi.trai)/beRongPhamViX;
          float nghich_t = 1.0f - t;
          
-         float u = (y - phamVi.trai)/beRongPhamViY;
+         float u = (y - phamVi.duoi)/beRongPhamViY;
          float nghich_u = 1.0f - u;
-         
+         printf( "trong pham vi  %5.3f %5.3f %5.3f   t %5.3f  u %5.3f\n", x, y, z, t, u );
+
          float t_60 = pow( nghich_t, 6.0f );
          float t_51 = pow( nghich_t, 5.0f )*t;
          float t_42 = pow( nghich_t, 4.0f )*t*t;
@@ -1048,10 +1065,10 @@ void chepMaTranVaoMaTran( float *maTranChep, unsigned short beRongMaTranChep, un
 
 #pragma mark ---- Kết Nối Ngang
 // cùng điểm
-// 0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0   1  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0
-// 0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0   1  0  0  0   0  0  0  0   0  0  0  0
-// 0  0  0  0   0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0   1  0  0  0   0  0  0  0
-// 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0   1  0  0  0
+// 0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0  -1  0  0  0   0  0  0  0   0  0  0  0   0  0  0  0
+// 0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0  -1  0  0  0   0  0  0  0   0  0  0  0
+// 0  0  0  0   0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0  -1  0  0  0   0  0  0  0
+// 0  0  0  0   0  0  0  0   0  0  0  0   0  0  0  1   0  0  0  0   0  0  0  0   0  0  0  0  -1  0  0  0
 
 // góc mịn
 // 0  0 -1  1   0  0  0  0   0  0  0  0   0  0  0  0   1 -1  0  0   0  0  0  0   0  0  0  0   0  0  0  0
@@ -1065,22 +1082,22 @@ void ketNoiNgang_32x8( float *maTranDich, unsigned short beRongMaTranDich, unsig
    unsigned int diaChi0 = soHangDau*beRongMaTranDich + soCotDau + 3;
    unsigned int diaChi1 = soHangDau*beRongMaTranDich + soCotDau + 16;
    maTranDich[diaChi0] = 1.0f;
-   maTranDich[diaChi1] = 1.0f;
+   maTranDich[diaChi1] = -1.0f;
    
    diaChi0 += beRongMaTranDich + 4;
    diaChi1 += beRongMaTranDich + 4;
    maTranDich[diaChi0] = 1.0f;
-   maTranDich[diaChi1] = 1.0f;
+   maTranDich[diaChi1] = -1.0f;
    
    diaChi0 += beRongMaTranDich + 4;
    diaChi1 += beRongMaTranDich + 4;
    maTranDich[diaChi0] = 1.0f;
-   maTranDich[diaChi1] = 1.0f;
+   maTranDich[diaChi1] = -1.0f;
    
    diaChi0 += beRongMaTranDich + 4;
    diaChi1 += beRongMaTranDich + 4;
    maTranDich[diaChi0] = 1.0f;
-   maTranDich[diaChi1] = 1.0f;
+   maTranDich[diaChi1] = -1.0f;
 
    // ---- góc mịn
    diaChi0 = (soHangDau + 4)*beRongMaTranDich + soCotDau + 2;
@@ -1196,7 +1213,7 @@ void ketNoiNgang_8x32( float *maTranDich, unsigned short beRongMaTranDich, unsig
    diaChi += 4;
    maTranDich[diaChi] = 1.0f/6.0f;
    
-   diaChi = (soHangDau + 21)*beRongMaTranDich + soCotDau + 4;
+   diaChi = (soHangDau + 21)*beRongMaTranDich + soCotDau + 5;
    maTranDich[diaChi] = -1.0f/18.0f;
    
    diaChi = (soHangDau + 24)*beRongMaTranDich + soCotDau + 2;
@@ -1204,7 +1221,7 @@ void ketNoiNgang_8x32( float *maTranDich, unsigned short beRongMaTranDich, unsig
    diaChi += 4;
    maTranDich[diaChi] = 1.0f/6.0f;
    
-   diaChi = (soHangDau + 25)*beRongMaTranDich + soCotDau + 4;
+   diaChi = (soHangDau + 25)*beRongMaTranDich + soCotDau + 6;
    maTranDich[diaChi] = -1.0f/18.0f;
 
    diaChi = (soHangDau + 28)*beRongMaTranDich + soCotDau + 3;
@@ -1212,7 +1229,7 @@ void ketNoiNgang_8x32( float *maTranDich, unsigned short beRongMaTranDich, unsig
    diaChi += 4;
    maTranDich[diaChi] = 0.5f;
    
-   diaChi = (soHangDau + 29)*beRongMaTranDich + soCotDau + 4;
+   diaChi = (soHangDau + 29)*beRongMaTranDich + soCotDau + 7;
    maTranDich[diaChi] = -1.0f/6.0f;
 }
 
@@ -1315,7 +1332,7 @@ void ketNoiNgang_8x16_matDuoi( float *maTranDich, unsigned short beRongMaTranDic
    diaChi += 4;
    maTranDich[diaChi] = 1.0f/6.0f;
    
-   diaChi = (soHangDau + 15)*beRongMaTranDich + soCotDau + 2;
+   diaChi = (soHangDau + 15)*beRongMaTranDich + soCotDau + 3;
    maTranDich[diaChi] = 0.5f;
    diaChi += 4;
    maTranDich[diaChi] = 0.5f;
@@ -1475,7 +1492,7 @@ void chieu_maTran( float *maTran, unsigned short beRong, unsigned short beCao ) 
    while( soHang < beCao ) {
       unsigned short soCot = 0;
       while( soCot < beRong ) {
-         printf( " %5.2f", maTran[chiSoMaTran] );
+         printf( " %7.4f", maTran[chiSoMaTran] );
          soCot++;
          chiSoMaTran++;
       }

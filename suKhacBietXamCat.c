@@ -2978,7 +2978,7 @@ void chepAnhVaoAnh( unsigned char *anhToMau, unsigned int beRongAnhTo, unsigned 
    
    unsigned int soHangCuoi = beCaoAnhTo;
    if( beCaoAnhTo + dichY > beCaoXuat )
-      soHangCuoi = beRongXuat - dichY;
+      soHangCuoi = beCaoXuat - dichY;
    
    unsigned int diaChiAnhToMau = 0;
 
